@@ -1,0 +1,18 @@
+TO DO
+-----
+Get "pip install" working
+    - Basic install
+    - Create wheel
+    - Add testing support
+Find better solution than passing around 2 different kinds of prune functions (local and global)
+Document the code thoroughly
+Finish README
+Add copyrights to code
+Enable code coverage report generation
+Use github to build upon pushes?
+Create example (using MNIST?)
+Post package to pypi
+
+
+DONE
+----
