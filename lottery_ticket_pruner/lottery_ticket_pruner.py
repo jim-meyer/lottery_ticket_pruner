@@ -6,7 +6,7 @@ import math
 import keras
 import numpy as np
 
-logger = logging.get_logger('lottery_ticket_pruner')
+logger = logging.getLogger('lottery_ticket_pruner')
 
 
 def prune_func_docs(original_weights, current_weights, current_mask, prune_percentage=None, prune_count=None):

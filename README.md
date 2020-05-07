@@ -12,12 +12,24 @@ often times result in better model accuracy!*
 
 See https://packaging.python.org/tutorials/packaging-projects/
 
+    pip install -r requirements.txt
     python setup.py sdist bdist_wheel
     TODO - etc etc etc
 
 # Testing
 
+Running unit tests is done via `tox` and automatically generates a code coverage report.
+
+    tox
+
+Or:
+
+    set PYTHONPATH=.
+    pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term tests
+
 # Contributing
+
+Pull requests to https://github.com/jim-meyer/lottery_ticket_pruner are always welcome.
 
 # Citations
 

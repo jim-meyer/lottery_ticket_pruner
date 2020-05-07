@@ -8,7 +8,7 @@ setuptools.setup(
     version='0.0.1',
     author='Jim Meyer',
     author_email='jimm@racemed.com',
-    description='Prunes DNNs using "lottery ticket" pruning',
+    description='Enables pruning of Keras DNNs using "lottery ticket" pruning',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/jim-meyer/lottery_ticket_pruner',

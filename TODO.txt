@@ -5,6 +5,11 @@ Get "pip install" working
     - Create wheel
     - Add testing support
 Find better solution than passing around 2 different kinds of prune functions (local and global)
+Make sure code can be imported intelligently
+Make sure we're doing logging in interesting places
+Inspect code coverage misses
+Make sure things work with TF2
+Make sure unit tests pass reliably even after multiple invocations
 Document the code thoroughly
 Finish README
 Add copyrights to code
