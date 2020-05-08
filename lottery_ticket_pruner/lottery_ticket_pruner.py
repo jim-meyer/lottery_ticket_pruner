@@ -204,9 +204,10 @@ class LotteryTicketPruner(object):
         assert self.prune_masks_map[tpl][index] is not None
         self.prune_masks_map[tpl][index] = new_mask
 
-    def _iterate_prunables(self):
+    def iterate_prunables(self):
         """ Returns iterator over all prunable weights in all layers of the model.
-        returns: tuple of (tpl<layer, index of weights in layer>, index, prune percentage, original weights, current weights, prune mask)
+        returns: tuple of (tpl<layer, index of weights in layer>, index of these weights in layer's weights array,
+                            prune percentage, original weights, current weights, prune mask)
         """
         for tpl in self.prunable_tuples:
             layer = tpl[0]
@@ -244,7 +245,7 @@ class LotteryTicketPruner(object):
         global_prune_strats = {'smallest_weights_global': _prune_func_smallest_weights_global}
         if prune_strategy in local_prune_strats:
             local_prune_func = local_prune_strats[prune_strategy]
-            for tpl, index, original_weights, current_weights, mask in self._iterate_prunables():
+            for tpl, index, original_weights, current_weights, mask in self.iterate_prunables():
                 new_mask = local_prune_func(original_weights, current_weights, mask, actual_prune_percentage)
                 self.prune_masks_map[tpl][index] = new_mask
         elif prune_strategy in global_prune_strats:
@@ -255,8 +256,8 @@ class LotteryTicketPruner(object):
                 real_prune_func(prunables_iterator, update_mask_func, prune_percentage=prune_percentage, prune_count=prune_count)
 
             global_prune_func = global_prune_strats[prune_strategy]
-            # proxy(global_prune_func, self._iterate_prunables(), self.update_mask, prune_percentage=actual_prune_percentage)
-            global_prune_func(self._iterate_prunables(), self._update_mask, prune_percentage=actual_prune_percentage)
+            # proxy(global_prune_func, self.iterate_prunables(), self.update_mask, prune_percentage=actual_prune_percentage)
+            global_prune_func(self.iterate_prunables(), self._update_mask, prune_percentage=actual_prune_percentage)
         else:
             all_keys = set(local_prune_strats.keys()).union(set(global_prune_strats.keys()))
             raise ValueError('"prune_strategy" must be one of {}'.format(all_keys))

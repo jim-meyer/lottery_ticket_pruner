@@ -2,6 +2,7 @@ TO DO
 -----
 Make sure we're doing logging in interesting places
 Figure out why tox isn't showing proper code coverage numbers but `pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term --pyargs lottery_ticket_pruner tests` is
+Implement same-sign pruning
 Make sure things work with TF2
 Document the code thoroughly
 Finish README

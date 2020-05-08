@@ -113,11 +113,11 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertIn('prune_count', str(ex.exception))
 
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = _prune_func_smallest_weights_global(pruner._iterate_prunables(), None, prune_percentage=0.0, prune_count=None)
+            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(), None, prune_percentage=0.0, prune_count=None)
             self.assertEqual(1, warning.call_count)
 
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = _prune_func_smallest_weights_global(pruner._iterate_prunables(), None, prune_percentage=None, prune_count=0)
+            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(), None, prune_percentage=None, prune_count=0)
             self.assertEqual(1, warning.call_count)
 
     #
