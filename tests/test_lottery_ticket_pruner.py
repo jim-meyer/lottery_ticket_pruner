@@ -6,7 +6,8 @@ import keras
 import numpy as np
 import tensorflow
 
-import lottery_ticket_pruner.lottery_ticket_pruner as lottery_ticket_pruner
+import lottery_ticket_pruner
+from lottery_ticket_pruner.lottery_ticket_pruner import _prune_func_smallest_weights, _prune_func_smallest_weights_global
 
 TEST_NUM_CLASSES = 3
 TEST_DENSE_INPUT_DIMS = (32, )
@@ -67,35 +68,35 @@ class TestLotteryTicketStateManager(unittest.TestCase):
     # _prune_func_smallest_weights()
     #
     def test_prune_func_smallest_weights(self):
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([1, 2, 3, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.25)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([1, 2, 3, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.25)
         self.assertTrue(np.array_equal([0, 1, 1, 1], actual_mask))
 
         # Just changed order of weights
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([3, 1, 2, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([3, 1, 2, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.5)
         self.assertTrue(np.array_equal([1, 0, 0, 1], actual_mask))
 
         # Odd number of weights
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([5, 3, 1, 2, 4], dtype=float), np.array([1, 1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([5, 3, 1, 2, 4], dtype=float), np.array([1, 1, 1, 1, 1]), prune_percentage=0.5)
         self.assertTrue(np.array_equal([1, 1, 0, 0, 1], actual_mask))
 
         # Current mask masks out one of the lowest weights
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([1, 2, 3, 4, 5], dtype=float), np.array([0, 1, 1, 1, 1]), prune_percentage=0.25)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([1, 2, 3, 4, 5], dtype=float), np.array([0, 1, 1, 1, 1]), prune_percentage=0.25)
         self.assertTrue(np.array_equal([0, 0, 1, 1, 1], actual_mask))
 
         # Current mask masks out one of the lowest weights
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([1, 2, 3, 4], dtype=float), np.array([0, 1, 1, 0]), prune_percentage=0.25)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([1, 2, 3, 4], dtype=float), np.array([0, 1, 1, 0]), prune_percentage=0.25)
         self.assertTrue(np.array_equal([0, 0, 1, 0], actual_mask))
 
         # Some negative and some positive weights should be masked
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([-1, 2, -3, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([-1, 2, -3, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.5)
         self.assertTrue(np.array_equal([0, 0, 1, 1], actual_mask))
 
         # Many identical values but only some of them should get masked
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([1, 1, 1, 1, 2, 2], dtype=float), np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([1, 1, 1, 1, 2, 2], dtype=float), np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
         self.assertEqual(3, np.sum(actual_mask))
 
         # Many identical absolute values but only some of them should get masked
-        actual_mask = lottery_ticket_pruner._prune_func_smallest_weights(np.array([]), np.array([1, -1, -1, 1, 2, -2], dtype=float), np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), np.array([1, -1, -1, 1, 2, -2], dtype=float), np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
         self.assertEqual(3, np.sum(actual_mask))
 
     #
@@ -107,16 +108,16 @@ class TestLotteryTicketStateManager(unittest.TestCase):
 
         # Both percentage and count are unspecified
         with self.assertRaises(ValueError) as ex:
-            _ = lottery_ticket_pruner._prune_func_smallest_weights_global(None, None, prune_percentage=None, prune_count=None)
+            _ = _prune_func_smallest_weights_global(None, None, prune_percentage=None, prune_count=None)
         self.assertIn('prune_percentage', str(ex.exception))
         self.assertIn('prune_count', str(ex.exception))
 
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = lottery_ticket_pruner._prune_func_smallest_weights_global(pruner._iterate_prunables(), None, prune_percentage=0.0, prune_count=None)
+            _ = _prune_func_smallest_weights_global(pruner._iterate_prunables(), None, prune_percentage=0.0, prune_count=None)
             self.assertEqual(1, warning.call_count)
 
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = lottery_ticket_pruner._prune_func_smallest_weights_global(pruner._iterate_prunables(), None, prune_percentage=None, prune_count=0)
+            _ = _prune_func_smallest_weights_global(pruner._iterate_prunables(), None, prune_percentage=None, prune_count=0)
             self.assertEqual(1, warning.call_count)
 
     #

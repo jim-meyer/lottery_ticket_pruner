@@ -41,6 +41,7 @@ def _prune_func_smallest_weights(original_weights, current_weights, current_mask
     weights, the current mask. This function should not alter these.
     This function strictly calculates the updated pruning mask to be used when the `LotteryTicketPruner` instance actually
     does the pruning.
+    @see [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](https://arxiv.org/pdf/1803.03635.pdf)
     :param original_weights: The weights as they were in the model when the `LotteryTicketPruner` instance was created.
     :param current_weights: The current weights of the model.
     :param current_mask: The current boolean mask for weight that are prunable. False means weight is pruned; True means
@@ -73,6 +74,7 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
     smallest value in all of the weights being pruned.
         E.g. If there are 5 occurrences of 0.1234 and 0.1234 is the `prune_count`th smallest value then 4 extra values (5 - 1 == 4)
         will be pruned. This is expected to be a rare occurrence and hence is not accounted for here.
+    @see [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](https://arxiv.org/pdf/1803.03635.pdf)
     :param iterable prunables_iterator: A iterator that returns information about what weights are prunable in the model as tuples:
         (tpl, index, prune_percentage, original_weights, current_weights, current_mask)
     :param update_mask_func: A function that can be used to update the mask in the `LotteryTicketPruner` instance
@@ -117,18 +119,20 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
         update_mask_func(tpl, index, new_mask)
 
 
-# def prune_func_same_sign(prune_percentage, original_weights, current_weights, current_mask):
-#     prune_count = int(np.sum(current_mask) * prune_percentage)
-#     original_flat = original_weights.flatten()
-#     flat = current_weights.flatten()
-#     flat[flat == 0.0] = math.inf
-#
-#     flat_mins = np.argpartition(np.absolute(flat), prune_count - 1)
-#     max_min = flat[flat_mins[prune_count - 1]]
-#
-#     prune_mask = current_weights > max_min
-#     new_mask = current_mask * prune_mask
-#     return new_mask
+# def prune_func_same_sign(prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None):
+#     """ Prunes weights across all layers that don't have the same sign as the original weights.
+#     we look for the smallest N weights across all layers.
+#     @see[Deconstructing Lottery Tickets: Zeros, Signs, and the Supermask](https://eng.uber.com/deconstructing-lottery-tickets/)
+#     :param iterable prunables_iterator: A iterator that returns information about what weights are prunable in the model as tuples:
+#         (tpl, index, prune_percentage, original_weights, current_weights, current_mask)
+#     :param update_mask_func: A function that can be used to update the mask in the `LotteryTicketPruner` instance
+#     :type update_mask_func: def update_mask_func(tpl, index, new_mask)
+#     :param float prune_percentage:
+#     :returns n/a
+#     """
+#     if prune_percentage is None and prune_count is None:
+#         raise ValueError('Either `prune_percentage` or `prune_count` must be specified')
+#     raise NotImplementedError('Not implemented yet')
 
 
 class LotteryTicketPruner(object):
