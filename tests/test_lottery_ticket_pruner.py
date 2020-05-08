@@ -248,7 +248,7 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         unpruned = unpruned_pos + unpruned_neg
         self.assertIn(unpruned, [int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate), int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate) - 1])
         expected_to_be_pruned = TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES - unpruned - 1
-        self.assertEqual(int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate), expected_to_be_pruned)
+        self.assertLessEqual(abs(int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate) - expected_to_be_pruned), 1)
 
         # Prune again
         prune_rate2 = 0.1

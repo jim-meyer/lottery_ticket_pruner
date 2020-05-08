@@ -3,7 +3,6 @@ TO DO
 Make sure code can be imported intelligently. "import lottery_ticker_pruner; ltp = LotteryTicketPruner(model)"
 Make sure we're doing logging in interesting places
 Make sure things work with TF2
-Make sure unit tests pass reliably even after multiple invocations
 Document the code thoroughly
 Finish README
 Add copyrights to code
@@ -22,3 +21,4 @@ Get "pip install" working
 Enable code coverage report generation
 Find better solution than passing around 2 different kinds of prune functions (local and global)
 Inspect code coverage misses
+Make sure unit tests pass reliably even after multiple invocations

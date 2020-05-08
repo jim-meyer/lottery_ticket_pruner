@@ -10,8 +10,8 @@ import numpy as np
 logger = logging.getLogger('lottery_ticket_pruner')
 
 
-def _prune_func_docs(original_weights, current_weights, current_mask, prune_percentage):
-    """ Calculates the pruning mask for a given layer.
+def _prune_func_random(original_weights, current_weights, current_mask, prune_percentage):
+    """ Randomly prunes the weights.
     This function gets called with information about the layer being pruned including the original weights, the current
     weights, the current mask. This function should not alter these.
     This function strictly calculates the updated pruning mask to be used when the `LotteryTicketPruner` instance actually
@@ -22,28 +22,8 @@ def _prune_func_docs(original_weights, current_weights, current_mask, prune_perc
         it is not pruned.
     :param float prune_percentage: The percentage of all weights to be pruned. If called twice for a model with 100 weights,
         first with 0.5 then with 0.2 then the first call should prune 50 weights, the second call should prune 20 weights.
+    :returns The new pruning mask. This is cumulative and hence should mask more weights than `current_mask`.
     """
-    raise NotImplementedError('This function exists just for documentation purposes')
-
-
-def _prune_func_global_docs(prunables_iterator, update_mask_func, prune_percentage, prune_count=None):
-    """ *_global() prune functions get information about all the prubable weights in the entire model. This allows
-    the global pruning function to operate across "globally" across all layers if it so chooses.
-    :param iterable prunables_iterator: A iterator that returns information about what weights are prunable in the model as tuples:
-        (tpl, index, prune_percentage, original_weights, current_weights, current_mask)
-    :param update_mask_func: A function that can be used to update the mask in the `LotteryTicketPruner` instance
-    :type update_mask_func: def update_mask_func(tpl, index, new_mask)
-    :param float prune_percentage: The percentage of all weights to be pruned. If called twice for a model with 100 weights,
-        first with 0.5 then with 0.2 then the first call should prune 50 weights, the second call should prune 20 weights.
-        Mutually exclusive with `prune_count`.
-    :param int prune_count: The number weights to be pruned. Mutually exclusive with `prune_percentage`.
-    :returns n/a
-    :raises ValueError if both, or neither, of `prune_percentage` and `prune_count` are specified.
-    """
-    raise NotImplementedError('This function exists just for documentation purposes')
-
-
-def _prune_func_random(original_weights, current_weights, current_mask, prune_percentage):
     prune_count = int(np.prod(current_mask.shape) * prune_percentage)
     shape = current_mask.shape
     flat = np.ravel(current_mask)
@@ -56,6 +36,19 @@ def _prune_func_random(original_weights, current_weights, current_mask, prune_pe
 
 
 def _prune_func_smallest_weights(original_weights, current_weights, current_mask, prune_percentage):
+    """ Prunes the smallest magnitude (absolute value) weights.
+    This function gets called with information about the layer being pruned including the original weights, the current
+    weights, the current mask. This function should not alter these.
+    This function strictly calculates the updated pruning mask to be used when the `LotteryTicketPruner` instance actually
+    does the pruning.
+    :param original_weights: The weights as they were in the model when the `LotteryTicketPruner` instance was created.
+    :param current_weights: The current weights of the model.
+    :param current_mask: The current boolean mask for weight that are prunable. False means weight is pruned; True means
+        it is not pruned.
+    :param float prune_percentage: The percentage of all weights to be pruned. If called twice for a model with 100 weights,
+        first with 0.5 then with 0.2 then the first call should prune 50 weights, the second call should prune 20 weights.
+    :returns The new pruning mask. This is cumulative and hence should mask more weights than `current_mask`.
+    """
     prune_count = int(np.prod(current_mask.shape) * prune_percentage)
     current_weights_flatten = current_weights.flatten()
     current_mask_flatten = current_mask.flatten()
@@ -73,17 +66,18 @@ def _prune_func_smallest_weights(original_weights, current_weights, current_mask
 
 
 def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None):
-    """ Like `prune_func_smallest_weights()` except that rather than look for smallest N weights for each layer
+    """ Like `_prune_func_smallest_weights()` except that rather than look for smallest N weights for each layer
     we look for the smallest N weights across all layers.
+    Like `_prune_func_smallest_weights()` this means the smallest magnitude weights.
     Note that in some cases more values may be pruned that requested *if* there are >1 occurrences of the `prune_count`th
     smallest value in all of the weights being pruned.
         E.g. If there are 5 occurrences of 0.1234 and 0.1234 is the `prune_count`th smallest value then 4 extra values (5 - 1 == 4)
         will be pruned. This is expected to be a rare occurrence and hence is not accounted for here.
-    :param float prune_percentage:
     :param iterable prunables_iterator: A iterator that returns information about what weights are prunable in the model as tuples:
         (tpl, index, prune_percentage, original_weights, current_weights, current_mask)
     :param update_mask_func: A function that can be used to update the mask in the `LotteryTicketPruner` instance
     :type update_mask_func: def update_mask_func(tpl, index, new_mask)
+    :param float prune_percentage:
     :returns n/a
     """
     if prune_percentage is None and prune_count is None:
