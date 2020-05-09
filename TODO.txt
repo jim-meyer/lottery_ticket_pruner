@@ -1,12 +1,8 @@
 TO DO
 -----
-Make sure we're doing logging in interesting places
-Figure out why tox isn't showing proper code coverage numbers but `pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term --pyargs lottery_ticket_pruner tests` is
 Implement same-sign pruning
 Make sure things work with TF2
-Document the code thoroughly
 Finish README
-Add copyrights to code
 Use github to build upon pushes?
 Create example (using MNIST?)
 Post package to pypi
@@ -24,3 +20,7 @@ Find better solution than passing around 2 different kinds of prune functions (l
 Inspect code coverage misses
 Make sure unit tests pass reliably even after multiple invocations
 Make sure code can be imported intelligently. "import lottery_ticker_pruner; ltp = LotteryTicketPruner(model)"
+Make sure we're doing logging in interesting places
+Document the code thoroughly
+Figure out why tox isn't showing proper code coverage numbers but `pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term --pyargs lottery_ticket_pruner tests` is
+Add copyrights to code

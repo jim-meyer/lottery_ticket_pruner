@@ -1,3 +1,4 @@
+""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
 import setuptools
 
 with open('README.md', 'r') as fh:

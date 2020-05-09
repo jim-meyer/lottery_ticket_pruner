@@ -1,4 +1,4 @@
-""" Copyright 2020 Jim Meyer """
+""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
 import copy
 import logging
 import math
@@ -24,6 +24,7 @@ def _prune_func_random(original_weights, current_weights, current_mask, prune_pe
         first with 0.5 then with 0.2 then the first call should prune 50 weights, the second call should prune 20 weights.
     :returns The new pruning mask. This is cumulative and hence should mask more weights than `current_mask`.
     """
+    logger.debug('Randomly pruning weights of shape {}. Prune percentage={:.2f}%'.format(current_weights.shape, prune_percentage * 100.0))
     prune_count = int(np.prod(current_mask.shape) * prune_percentage)
     shape = current_mask.shape
     flat = np.ravel(current_mask)
@@ -50,6 +51,7 @@ def _prune_func_smallest_weights(original_weights, current_weights, current_mask
         first with 0.5 then with 0.2 then the first call should prune 50 weights, the second call should prune 20 weights.
     :returns The new pruning mask. This is cumulative and hence should mask more weights than `current_mask`.
     """
+    logger.debug('Pruning smallest weights of shape {}. Prune percentage={:.2f}%'.format(current_weights.shape, prune_percentage * 100.0))
     prune_count = int(np.prod(current_mask.shape) * prune_percentage)
     current_weights_flatten = current_weights.flatten()
     current_mask_flatten = current_mask.flatten()
@@ -111,11 +113,7 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
         new_mask = np.absolute(current_weights) > max_min
         pruned_count = np.sum(new_mask == 0)
         weight_count = np.prod(current_weights.shape)
-        logger.info('Pruning {} of {} weights ({:.2f}%) of layer {}/{}'.format(pruned_count, weight_count, pruned_count / weight_count * 100, tpl[0].name, tpl[1]))
-        # print('Global pruning @{:.2f}%: Current mask count = {}. New mask count = {} out of {}'.format(prune_count / total_weight_count * 100.0,
-        #                                                                                                np.sum(current_mask == False),
-        #                                                                                                np.sum(new_mask == False),
-        #                                                                                                np.prod(current_mask.shape)))
+        logger.debug('Globally pruning {} of {} ({:.2f}%) smallest weights of layer {}/{}'.format(pruned_count, weight_count, pruned_count / weight_count * 100, tpl[0].name, tpl[1]))
         update_mask_func(tpl, index, new_mask)
 
 
@@ -249,14 +247,7 @@ class LotteryTicketPruner(object):
                 new_mask = local_prune_func(original_weights, current_weights, mask, actual_prune_percentage)
                 self.prune_masks_map[tpl][index] = new_mask
         elif prune_strategy in global_prune_strats:
-            def proxy(real_prune_func, prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None):
-                prunables_iterator = list(prunables_iterator)
-                for tpl, index, original_weights, current_weights, current_mask in prunables_iterator:
-                    logger.info('Global pruning: tpl={}, index={}, weights.shape={}'.format(tpl, index, current_weights.shape))
-                real_prune_func(prunables_iterator, update_mask_func, prune_percentage=prune_percentage, prune_count=prune_count)
-
             global_prune_func = global_prune_strats[prune_strategy]
-            # proxy(global_prune_func, self.iterate_prunables(), self.update_mask, prune_percentage=actual_prune_percentage)
             global_prune_func(self.iterate_prunables(), self._update_mask, prune_percentage=actual_prune_percentage)
         else:
             all_keys = set(local_prune_strats.keys()).union(set(global_prune_strats.keys()))

@@ -1,5 +1,8 @@
+""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
+import logging
 import math
 import random
+import sys
 import unittest
 
 import keras
@@ -16,6 +19,14 @@ TEST_DENSE_WEIGHT_COUNT = TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES
 
 TEST_DNN_INPUT_DIMS = (64, 64, 3)
 TEST_DNN_NUM_CLASSES = 10
+
+
+def enable_debug_logging():
+    logger = logging.getLogger('lottery_ticket_pruner')
+    logger.setLevel('DEBUG')
+    logger.addHandler(logging.StreamHandler(sys.stdout))
+
+# enable_debug_logging()
 
 
 class TestLotteryTicketStateManager(unittest.TestCase):
