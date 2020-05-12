@@ -6,6 +6,8 @@ often times result in better model accuracy!*
 
 # Installation
 
+    pip install lottery_ticket_pruner
+
 # Usage
 
 # Building
@@ -22,14 +24,9 @@ Running unit tests is done via `tox` and automatically generates a code coverage
 
     tox
 
-Or:
-
-    set PYTHONPATH=.
-    pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term tests
-
 # Contributing
 
-Pull requests to https://github.com/jim-meyer/lottery_ticket_pruner are always welcome.
+Pull requests to [this repo](https://github.com/jim-meyer/lottery_ticket_prune) are always welcome.
 
 # Citations
 

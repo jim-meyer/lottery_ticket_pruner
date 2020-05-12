@@ -3,6 +3,10 @@ keras==2.2.4
 numpy==1.18.3
 tensorflow==1.13.1
 
+# For running unit tests
 tox==3.15.0
 pytest==5.4.1
 pytest-cov==2.8.1
+
+# For running example
+pandas==1.0.3

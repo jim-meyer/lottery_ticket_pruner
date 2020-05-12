@@ -36,6 +36,21 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         model = keras.Model(inputs=input, outputs=x)
         return model
 
+    def _create_test_model_diff_shape(self, diff_input_shape=False, diff_output_shape=False):
+        input_dims = (64, ) if diff_input_shape else TEST_DENSE_INPUT_DIMS
+        output_dims = (TEST_NUM_CLASSES + 1) if diff_output_shape else TEST_NUM_CLASSES
+        input = keras.Input(shape=input_dims, dtype='float32')
+        x = keras.layers.Dense(output_dims)(input)
+        model = keras.Model(inputs=input, outputs=x)
+        return model
+
+    def _create_test_mode_extra_layer(self):
+        input = keras.Input(shape=TEST_DENSE_INPUT_DIMS, dtype='float32')
+        x = keras.layers.Dense(TEST_NUM_CLASSES)(input)
+        x = keras.layers.Softmax()(x)
+        model = keras.Model(inputs=input, outputs=x)
+        return model
+
     def _create_test_dnn_model(self):
         input = keras.Input(shape=TEST_DNN_INPUT_DIMS, dtype='float32')
         x = keras.layers.Conv2D(4,
@@ -130,6 +145,29 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         with unittest.mock.patch('logging.Logger.warning') as warning:
             _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(), None, prune_percentage=None, prune_count=0)
             self.assertEqual(1, warning.call_count)
+
+    #
+    # constructor
+    #
+    def test_constructor(self):
+        model1 = self._create_test_model()
+        model2 = self._create_test_mode_extra_layer()
+
+        # Different number of layers
+        with self.assertRaises(ValueError) as ex:
+            _ = lottery_ticket_pruner.LotteryTicketPruner(model1, original_model=model2)
+        self.assertIn('must have the same number of layers', str(ex.exception))
+
+        # Different shapes
+        model2 = self._create_test_model_diff_shape(diff_input_shape=True)
+        with self.assertRaises(ValueError) as ex:
+            _ = lottery_ticket_pruner.LotteryTicketPruner(model1, original_model=model2)
+        self.assertIn('must have the same input shape', str(ex.exception))
+
+        model2 = self._create_test_model_diff_shape(diff_output_shape=True)
+        with self.assertRaises(ValueError) as ex:
+            _ = lottery_ticket_pruner.LotteryTicketPruner(model1, original_model=model2)
+        self.assertIn('must have the same output shape', str(ex.exception))
 
     #
     # reset()

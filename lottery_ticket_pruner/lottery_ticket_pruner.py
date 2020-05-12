@@ -138,21 +138,46 @@ class LotteryTicketPruner(object):
     This class prunes weights from a model and keeps internal state to track which weights have been pruned.
     Inspired from https://arxiv.org/pdf/1803.03635.pdf, "THE LOTTERY TICKET HYPOTHESIS: FINDING SPARSE, TRAINABLE NEURAL NETWORKS"
     """
-    def __init__(self, model):
+    def __init__(self, model, original_model=None):
+        """
+        :param model: The model being trained and that will be pruned.
+        :param original_model: (optional) The model containing the original weights to be used by the pruning logic to
+            determine which weights of the model being trained are to be pruned.
+            If `None` then the original weights are taken from `model`.
+        """
         self.model = model
 
+        if original_model is None:
+            original_model = model
+        else:
+            if len(self.model.layers) != len(original_model.layers):
+                raise ValueError('`model` and `original_model` must have the same number of layers ({} vs {}'.format(
+                    len(self.model.layers), len(original_model.layers)))
+            for layer, original_layer in zip(self.model.layers, original_model.layers):
+                if (hasattr(layer, 'input_shape') or hasattr(original_layer, 'input_shape')) and layer.input_shape != original_layer.input_shape:
+                    raise ValueError(
+                        'All layers in `model` and `original_model` must have the same input shape ({}/{} vs {}/{})'.format(
+                            layer.name, layer.input_shape, original_layer.name, original_layer.input_shape))
+
+                if (hasattr(layer, 'output_shape') or hasattr(original_layer, 'output_shape')) and layer.output_shape != original_layer.output_shape:
+                    raise ValueError(
+                        'All layers in `model` and `original_model` must have the same output shape ({}/{} vs {}/{})'.format(
+                            layer.name, layer.output_shape, original_layer.name, original_layer.output_shape))
+
+        # First save off the original weights
         self._original_weights = []
-        for layer in model.layers:
+        for layer in original_model.layers:
             layer_weights = layer.get_weights()
             self._original_weights.append(copy.deepcopy(layer_weights))
 
+        # Now determine which weights of which layers are prunable
         # An array of (layer, [weight indices (ints)]) tuples of weights that are prunable.
         self.prunable_tuples = []
         # Dicts of (layer, [weight indices (ints)]) tuples whose value are arrays of masks, arrays of weights
         self.prune_masks_map = {}
         self.prunable_weights_map = {}
         self.original_weights_map = {}
-        for layer in self.model.layers:
+        for layer in original_model.layers:
             layer_weights = layer.get_weights()
             prune_masks = [None] * len(layer_weights)
             weights_indices = set()
