@@ -2,12 +2,14 @@ import collections
 import json
 
 import keras
-from keras.datasets import mnist
+from keras.datasets import cifar10
+#from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
 
+import numpy as np
 import pandas as pd
 
 import lottery_ticket_pruner
@@ -32,20 +34,17 @@ class MNIST(object):
         self.batch_size = 128
         self.num_classes = 10
 
-        # input image dimensions
-        self.img_rows, self.img_cols = 28, 28
-
         # the data, split between train and test sets
-        (x_train, y_train), (x_test, y_test) = mnist.load_data()
+        (x_train, y_train), (x_test, y_test) = self.load_cifar10_data()
 
         if K.image_data_format() == 'channels_first':
-            x_train = x_train.reshape(x_train.shape[0], 1, self.img_rows, self.img_cols)
-            x_test = x_test.reshape(x_test.shape[0], 1, self.img_rows, self.img_cols)
-            self.input_shape = (1, self.img_rows, self.img_cols)
+            x_train = x_train.reshape(x_train.shape[0], self.channels, self.img_rows, self.img_cols)
+            x_test = x_test.reshape(x_test.shape[0], self.channels, self.img_rows, self.img_cols)
+            self.input_shape = (self.channels, self.img_rows, self.img_cols)
         else:
-            x_train = x_train.reshape(x_train.shape[0], self.img_rows, self.img_cols, 1)
-            x_test = x_test.reshape(x_test.shape[0], self.img_rows, self.img_cols, 1)
-            self.input_shape = (self.img_rows, self.img_cols, 1)
+            x_train = x_train.reshape(x_train.shape[0], self.img_rows, self.img_cols, self.channels)
+            x_test = x_test.reshape(x_test.shape[0], self.img_rows, self.img_cols, self.channels)
+            self.input_shape = (self.img_rows, self.img_cols, self.channels)
 
         x_train = x_train.astype('float32')
         x_test = x_test.astype('float32')
@@ -63,6 +62,35 @@ class MNIST(object):
 
         self.logging_callback = LoggingCheckpoint(experiment)
         self.callbacks = [self.logging_callback]
+
+    def load_cifar10_data(self):
+        # input image dimensions
+        self.img_rows, self.img_cols = 32, 32
+        self.channels = 3
+
+        def get_first_n(X, y, classes, n):
+            result = []
+            # Accumulate the first N samples of each class
+            for cls in classes:
+                first_n = np.where(y == cls)[0][:n]
+                result.extend(first_n)
+            # Now put them back into the original order
+            result = sorted(result)
+            X = X[result]
+            y = y[result]
+            return X, y
+
+        (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+        x_train, y_train = get_first_n(x_train, y_train, range(self.num_classes), 500)
+        x_test, y_test = get_first_n(x_test, y_test, range(self.num_classes), 100)
+        return (x_train, y_train), (x_test, y_test)
+
+    def load_mnist_data(self):
+        # input image dimensions
+        self.img_rows, self.img_cols = 28, 28
+        self.channels = 1
+        (x_train, y_train), (x_test, y_test) = mnist.load_mnist_data()
+        return (x_train, y_train), (x_test, y_test)
 
     def create_model(self):
         model = Sequential()
@@ -138,7 +166,7 @@ class MNISTNoDropoutGloballyPruned(MNISTNoDropout):
 
 
 def compare():
-    epochs = 1
+    epochs = 5
 
     test_results = collections.defaultdict(dict)
 
@@ -160,7 +188,7 @@ def compare():
     overall_prune_rate = 0.0
     # Use the weights from the trained model as the basis for determining what weights we'll prune for the new model.
     pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
-    for i in range(1):
+    for i in range(4):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
