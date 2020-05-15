@@ -166,7 +166,7 @@ class MNISTNoDropoutGloballyPruned(MNISTNoDropout):
 
 
 def compare():
-    epochs = 5
+    epochs = 100
 
     test_results = collections.defaultdict(dict)
 

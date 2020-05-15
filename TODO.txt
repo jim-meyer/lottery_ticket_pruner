@@ -1,11 +1,11 @@
 TO DO
 -----
 Implement same-sign pruning
-See if there is a keras logger that should be used instead of `logging.getLogger('lottery_ticket_pruner')`
+Run cifar100_reduced_10x_100_epochs 5x and average results
+Implement inside my training pipeline to see if pruning results for DNNs show promise
 Address all outstanding TODOs
 Make sure things work with TF2
 Finish README
-Create example (using MNIST?)
 Use github to build upon pushes?
 Post package to pypi
     https://packaging.python.org/guides/using-testpypi/
@@ -26,3 +26,4 @@ Make sure we're doing logging in interesting places
 Document the code thoroughly
 Figure out why tox isn't showing proper code coverage numbers but `pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term --pyargs lottery_ticket_pruner tests` is
 Add copyrights to code
+Create example (using MNIST?)
