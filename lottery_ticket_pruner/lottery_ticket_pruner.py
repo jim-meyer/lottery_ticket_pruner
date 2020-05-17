@@ -78,7 +78,7 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
         will be pruned. This is expected to be a rare occurrence and hence is not accounted for here.
     @see [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](https://arxiv.org/pdf/1803.03635.pdf)
     :param iterable prunables_iterator: A iterator that returns information about what weights are prunable in the model as tuples:
-        (tpl, index, prune_percentage, original_weights, current_weights, current_mask)
+        (tpl, layer, index, prune_percentage, original_weights, current_weights, current_mask)
     :param update_mask_func: A function that can be used to update the mask in the `LotteryTicketPruner` instance
     :type update_mask_func: def update_mask_func(tpl, index, new_mask)
     :param float prune_percentage:
@@ -90,7 +90,7 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
     all_weights_abs = []
     current_mask_flat = []
     prunables_list = list(prunables_iterator)
-    for tpl, index, original_weights, current_weights, current_mask in prunables_list:
+    for tpl, layer, index, original_weights, current_weights, current_mask in prunables_list:
         all_weights_abs.extend(np.absolute(current_weights.flat))
         current_mask_flat.extend(current_mask.flat)
         weight_count = np.prod(current_weights.shape)
@@ -109,11 +109,11 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
     flat_mins = np.argpartition(all_weights_abs, prune_count - 1)
     max_min = all_weights_abs[flat_mins[prune_count - 1]]
 
-    for tpl, index, original_weights, current_weights, current_mask in prunables_list:
+    for tpl, layer, index, original_weights, current_weights, current_mask in prunables_list:
         new_mask = np.absolute(current_weights) > max_min
         pruned_count = np.sum(new_mask == 0)
         weight_count = np.prod(current_weights.shape)
-        logger.debug('Globally pruning {} of {} ({:.2f}%) smallest weights of layer {}/{}'.format(pruned_count, weight_count, pruned_count / weight_count * 100, tpl[0].name, tpl[1]))
+        logger.debug('Globally pruning {} of {} ({:.2f}%) smallest weights of layer {}/{}'.format(pruned_count, weight_count, pruned_count / weight_count * 100, layer.name, index))
         update_mask_func(tpl, index, new_mask)
 
 
@@ -171,7 +171,8 @@ class LotteryTicketPruner(object):
             self._original_weights.append(copy.deepcopy(layer_weights))
 
         # Now determine which weights of which layers are prunable
-        # An array of (layer, [weight indices (ints)]) tuples of weights that are prunable.
+        layer_index = 0
+        # An array of (layer index, [weight indices (ints)]) tuples of weights that are prunable.
         self.prunable_tuples = []
         # Dicts of (layer, [weight indices (ints)]) tuples whose value are arrays of masks, arrays of weights
         self.prune_masks_map = {}
@@ -187,9 +188,11 @@ class LotteryTicketPruner(object):
                     weights_indices.add(i)
                     prune_masks[i] = np.ones(weights.shape)
                 i += 1
-            tpl = (layer, tuple(weights_indices))
-            self.prunable_tuples.append(tpl)
-            self.prune_masks_map[tpl] = prune_masks
+            if len(weights_indices) > 0:
+                tpl = (layer_index, tuple(weights_indices))
+                self.prunable_tuples.append(tpl)
+                self.prune_masks_map[tpl] = prune_masks
+            layer_index += 1
         self.cumulative_pruning_rate = 0.0
 
     def _prunable(self, layer, weights):
@@ -208,7 +211,6 @@ class LotteryTicketPruner(object):
             Model's original weights are restored.
             Pruned weight masks are reset.
         """
-        self.restore_initial_weights()
         self.reset_masks()
 
     def reset_masks(self):
@@ -218,28 +220,24 @@ class LotteryTicketPruner(object):
                 assert masks[index] is not None
                 masks[index].fill(True)
 
-    def restore_initial_weights(self):
-        """ Resets model to use the weights of the model at the time this instance was initially constructed. """
-        for layer, w in zip(self.model.layers, self._original_weights):
-            layer.set_weights(w)
-
     def _update_mask(self, tpl, index, new_mask):
         assert self.prune_masks_map[tpl][index] is not None
         self.prune_masks_map[tpl][index] = new_mask
 
     def iterate_prunables(self):
         """ Returns iterator over all prunable weights in all layers of the model.
-        returns: tuple of (tpl<layer, index of weights in layer>, index of these weights in layer's weights array,
+        returns: tuple of (tpl<layer index, index of weights in layer>, layer, index of these weights in layer's weights array,
                             prune percentage, original weights, current weights, prune mask)
         """
         for tpl in self.prunable_tuples:
-            layer = tpl[0]
+            layer_index = tpl[0]
             indices = tpl[1]
+            layer = self.model.layers[layer_index]
             current_weights = layer.get_weights()
             for index in indices:
                 mask = self.prune_masks_map[tpl][index]
                 if mask is not None:
-                    yield tpl, index, [], current_weights[index], mask
+                    yield tpl, layer, index, [], current_weights[index], mask
 
     def prune_weights(self, prune_percentage, prune_strategy):
         """ Prunes the specified percentage of the remaining unpruned weights from the model.
@@ -268,7 +266,7 @@ class LotteryTicketPruner(object):
         global_prune_strats = {'smallest_weights_global': _prune_func_smallest_weights_global}
         if prune_strategy in local_prune_strats:
             local_prune_func = local_prune_strats[prune_strategy]
-            for tpl, index, original_weights, current_weights, mask in self.iterate_prunables():
+            for tpl, layer, index, original_weights, current_weights, mask in self.iterate_prunables():
                 new_mask = local_prune_func(original_weights, current_weights, mask, actual_prune_percentage)
                 self.prune_masks_map[tpl][index] = new_mask
         elif prune_strategy in global_prune_strats:
@@ -284,8 +282,9 @@ class LotteryTicketPruner(object):
     def apply_pruning(self):
         """ Applies the existing pruning masks to the model's weights """
         for tpl in self.prunable_tuples:
-            layer = tpl[0]
+            layer_index = tpl[0]
             weight_indices = tpl[1]
+            layer = self.model.layers[layer_index]
             prune_masks = self.prune_masks_map[tpl]
 
             layer_weights = layer.get_weights()

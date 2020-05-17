@@ -175,11 +175,9 @@ class TestLotteryTicketStateManager(unittest.TestCase):
     def test_reset(self):
         model = self._create_test_model()
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
-        interesting_layer = model.layers[1]
+        interesting_layer_index = 1
         interesting_weights_index = 0
-        tpl = tuple([interesting_layer, tuple([interesting_weights_index])])
-
-        initial_weights = interesting_layer.get_weights()[interesting_weights_index]
+        tpl = tuple([interesting_layer_index, tuple([interesting_weights_index])])
 
         pruner.prune_weights(0.2, 'smallest_weights')
         pruner.reset()
@@ -187,20 +185,15 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         reset_mask = np.array(pruner.prune_masks_map[tpl][interesting_weights_index])
         self.assertEqual(TEST_DENSE_WEIGHT_COUNT, np.sum(reset_mask))
 
-        reset_weights = interesting_layer.get_weights()[interesting_weights_index]
-        self.assertIsNot(initial_weights, reset_weights)
-        num_same_weights = np.sum(initial_weights == reset_weights)
-        self.assertEqual(TEST_DENSE_WEIGHT_COUNT, num_same_weights)
-
     #
     # reset_masks()
     #
     def test_reset_masks(self):
         model = self._create_test_model()
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
-        interesting_layer = model.layers[1]
+        interesting_layer_index = 1
         interesting_weights_index = 0
-        tpl = tuple([interesting_layer, tuple([interesting_weights_index])])
+        tpl = tuple([interesting_layer_index, tuple([interesting_weights_index])])
 
         original_mask = np.array(pruner.prune_masks_map[tpl][interesting_weights_index])
         self.assertEqual(TEST_DENSE_WEIGHT_COUNT, np.sum(original_mask))
@@ -217,26 +210,6 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertEqual(TEST_DENSE_WEIGHT_COUNT, np.sum(reset_mask))
 
     #
-    # restore_initial_weights()
-    #
-    def test_restore_initial_weights(self):
-        model = self._create_test_model()
-        pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
-        interesting_layer = model.layers[1]
-        interesting_weights_index = 0
-        initial_weights = interesting_layer.get_weights()[interesting_weights_index]
-
-        pruner.prune_weights(0.2, 'smallest_weights')
-        pruned_weights = interesting_layer.get_weights()[interesting_weights_index]
-        num_same_weights = np.sum(initial_weights == pruned_weights)
-        self.assertLess(num_same_weights, TEST_DENSE_WEIGHT_COUNT)
-
-        pruner.restore_initial_weights()
-        restored_weights = interesting_layer.get_weights()[interesting_weights_index]
-        num_same_weights = np.sum(initial_weights == restored_weights)
-        self.assertEqual(TEST_DENSE_WEIGHT_COUNT, num_same_weights)
-
-    #
     # prune_weights()
     #   'smallest_weights'
     #
@@ -244,10 +217,11 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         model = self._create_test_model()
         # First layer is the input layer; ignore it
         # Second layer is Dense layer with 2 weights. First is fully connected weights. Second is output weights.
-        interesting_layer = model.layers[1]
+        interesting_layer_index = 1
+        interesting_layer = model.layers[interesting_layer_index]
         interesting_layer_shape = interesting_layer.weights[0].shape
         interesting_layer_weight_count = int(np.prod(interesting_layer_shape))
-        interesting_key = tuple([model.layers[1], tuple([0])])
+        interesting_key = tuple([interesting_layer_index, tuple([0])])
 
         dl_test_weights = np.random.choice(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, size=TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, replace=False)
         # Get rid of zero weights since we count those below during verification
@@ -426,11 +400,12 @@ class TestLotteryTicketStateManager(unittest.TestCase):
     #
     def test_LotteryTicketPruner_use_case_1(self):
         model = self._create_test_model()
+        starting_weights = model.get_weights()
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
         # First layer is the input layer; ignore it
         # Second layer is Dense layer with 2 weights. First is fully connected weights. Second is output weights.
-        interesting_key = tuple([model.layers[1], tuple([0])])
+        interesting_key = tuple([1, tuple([0])])
         num_unmasked = np.sum(pruner.prune_masks_map[interesting_key][0])
         self.assertEqual(num_unmasked, TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES)
 
@@ -448,7 +423,7 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
         self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.6))
 
-        pruner.restore_initial_weights()
+        model.set_weights(starting_weights)
         new_model_weights_sum = self._summed_model_weights(model)
         self.assertEqual(initial_model_weights_sum, new_model_weights_sum)
 

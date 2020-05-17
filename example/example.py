@@ -1,4 +1,5 @@
 import collections
+import copy
 import json
 
 import keras
@@ -30,12 +31,16 @@ class LoggingCheckpoint(keras.callbacks.Callback):
 
 
 class MNIST(object):
-    def __init__(self, experiment):
+    def __init__(self, experiment, which_set='mnist'):
         self.batch_size = 128
         self.num_classes = 10
 
         # the data, split between train and test sets
-        (x_train, y_train), (x_test, y_test) = self.load_cifar10_data()
+        func_map = {'mnist': self.load_mnist_data, 'cifar10': self.load_cifar10_data}
+        if which_set in func_map:
+            (x_train, y_train), (x_test, y_test) = func_map[which_set]()
+        else:
+            raise ValueError('`which_set` must be one of {} but it was {}'.format(func_map.keys(), which_set))
 
         if K.image_data_format() == 'channels_first':
             x_train = x_train.reshape(x_train.shape[0], self.channels, self.img_rows, self.img_cols)
@@ -89,7 +94,7 @@ class MNIST(object):
         # input image dimensions
         self.img_rows, self.img_cols = 28, 28
         self.channels = 1
-        (x_train, y_train), (x_test, y_test) = mnist.load_mnist_data()
+        (x_train, y_train), (x_test, y_test) = mnist.load_data()
         return (x_train, y_train), (x_test, y_test)
 
     def create_model(self):
@@ -127,9 +132,24 @@ class MNIST(object):
         return self.logging_callback.epoch_data
 
 
+class MNISTGloballyPruned(MNIST):
+    def __init__(self, experiment, pruner, which_set='mnist'):
+        super().__init__(experiment, which_set=which_set)
+        self.pruner = pruner
+
+    def fit(self, model, epochs):
+        callbacks = self.callbacks + [lottery_ticket_pruner.PrunerCallback(self.pruner)]
+        model.fit(self.x_train, self.y_train,
+                  batch_size=self.batch_size,
+                  epochs=epochs,
+                  verbose=1,
+                  validation_data=(self.x_test, self.y_test),
+                  callbacks=callbacks)
+
+
 class MNISTNoDropout(MNIST):
-    def __init__(self, experiment):
-        super().__init__(experiment)
+    def __init__(self, experiment, which_set='mnist'):
+        super().__init__(experiment, which_set=which_set)
 
     def create_model(self):
         model = Sequential()
@@ -151,8 +171,8 @@ class MNISTNoDropout(MNIST):
 
 
 class MNISTNoDropoutGloballyPruned(MNISTNoDropout):
-    def __init__(self, experiment, pruner):
-        super().__init__(experiment)
+    def __init__(self, experiment, pruner, which_set='mnist'):
+        super().__init__(experiment, which_set=which_set)
         self.pruner = pruner
 
     def fit(self, model, epochs):
@@ -166,36 +186,65 @@ class MNISTNoDropoutGloballyPruned(MNISTNoDropout):
 
 
 def compare():
-    epochs = 100
+    epochs = 1
 
     test_results = collections.defaultdict(dict)
 
+    which_set = 'mnist'
+
     experiment = 'MNIST'
-    mnist = MNIST(experiment)
+    mnist = MNIST(experiment, which_set=which_set)
     model = mnist.create_model()
+    starting_weights = model.get_weights()
+    original_model = copy.deepcopy(model)
+
+    experiment = 'MNIST_no_training'
+    test_results[experiment]['loss'], test_results[experiment]['accuracy'] = mnist.evaluate(model)
+
+    experiment = 'MNIST'
     mnist.fit(model, epochs)
     test_results[experiment]['loss'], test_results[experiment]['accuracy'] = mnist.evaluate(model)
     epoch_logs = mnist.get_epoch_logs()
 
-    experiment = 'MNISTNoDropout'
-    mnist_no_dropout = MNISTNoDropout(experiment)
-    model = mnist_no_dropout.create_model()
-    mnist_no_dropout.fit(model, epochs)
-    test_results[experiment]['loss'], test_results[experiment]['accuracy'] = mnist_no_dropout.evaluate(model)
-    epoch_logs.update(mnist_no_dropout.get_epoch_logs())
+    # experiment = 'MNISTNoDropout'
+    # mnist_no_dropout = MNISTNoDropout(experiment, which_set=which_set)
+    # model = mnist_no_dropout.create_model()
+    # mnist_no_dropout.fit(model, epochs)
+    # test_results[experiment]['loss'], test_results[experiment]['accuracy'] = mnist_no_dropout.evaluate(model)
+    # epoch_logs.update(mnist_no_dropout.get_epoch_logs())
 
+    # Use the weights from the trained model as the basis for determining what weights we'll prune for the new model.
+    pruner = lottery_ticket_pruner.LotteryTicketPruner(model, original_model=original_model)
+
+    # Evaluate performance of original model with pruning applied but no training at all
     prune_rate = 0.2
     overall_prune_rate = 0.0
-    # Use the weights from the trained model as the basis for determining what weights we'll prune for the new model.
-    pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
     for i in range(4):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
         pruner.prune_weights(prune_rate, 'smallest_weights_global')
+        model.set_weights(starting_weights)
+        pruner.apply_pruning()
+
+        experiment = 'MNIST_no_training_pruned@{:.3f}'.format(overall_prune_rate)
+        test_results[experiment]['loss'], test_results[experiment]['accuracy'] = mnist.evaluate(model)
+
+    pruner.reset_masks()
+
+    # Now train from original weights and prune during training
+    prune_rate = 0.2
+    overall_prune_rate = 0.0
+    for i in range(4):
+        prune_rate = pow(prune_rate, 1.0 / (i + 1))
+        overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
+
+        pruner.prune_weights(prune_rate, 'smallest_weights_global')
+        model.set_weights(starting_weights)
+        pruner.apply_pruning()
 
         experiment = 'MNISTNoDropout_pruned@{:.3f}'.format(overall_prune_rate)
-        mnist_pruned = MNISTNoDropoutGloballyPruned(experiment, pruner)
+        mnist_pruned = MNISTNoDropoutGloballyPruned(experiment, pruner, which_set=which_set)
         model = mnist_pruned.create_model()
         mnist_pruned.fit(model, epochs)
         test_results[experiment]['loss'], test_results[experiment]['accuracy'] = mnist_pruned.evaluate(model)
