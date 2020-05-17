@@ -1,9 +1,9 @@
 TO DO
 -----
-Include original weights in results returned by iterate_prunables()
 Consider changing prune_weights() to calc_prune_mask() and apply_pruning() to apply_pruning(model)
+Include original weights in results returned by iterate_prunables()
 Implement same-sign pruning
-Run cifar100_reduced_10x_100_epochs 5x and average results
+Run mnist, cifar10_reduced_10x 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise
 Address all outstanding TODOs
 Make sure things work with TF2
