@@ -1,5 +1,4 @@
 """ Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
-import copy
 import logging
 import math
 import sys
@@ -164,12 +163,6 @@ class LotteryTicketPruner(object):
                         'All layers in `model` and `original_model` must have the same output shape ({}/{} vs {}/{})'.format(
                             layer.name, layer.output_shape, original_layer.name, original_layer.output_shape))
 
-        # First save off the original weights
-        self._original_weights = []
-        for layer in original_model.layers:
-            layer_weights = layer.get_weights()
-            self._original_weights.append(copy.deepcopy(layer_weights))
-
         # Now determine which weights of which layers are prunable
         layer_index = 0
         # An array of (layer index, [weight indices (ints)]) tuples of weights that are prunable.
@@ -177,21 +170,24 @@ class LotteryTicketPruner(object):
         # Dicts of (layer, [weight indices (ints)]) tuples whose value are arrays of masks, arrays of weights
         self.prune_masks_map = {}
         self.prunable_weights_map = {}
-        self.original_weights_map = {}
+        self._original_weights_map = {}
         for layer in original_model.layers:
             layer_weights = layer.get_weights()
             prune_masks = [None] * len(layer_weights)
+            original_layer_weights = [None] * len(layer_weights)
             weights_indices = set()
             i = 0
             for weights in layer_weights:
                 if self._prunable(layer, weights):
                     weights_indices.add(i)
                     prune_masks[i] = np.ones(weights.shape)
+                    original_layer_weights[i] = weights
                 i += 1
             if len(weights_indices) > 0:
                 tpl = (layer_index, tuple(weights_indices))
                 self.prunable_tuples.append(tpl)
                 self.prune_masks_map[tpl] = prune_masks
+                self._original_weights_map[tpl] = original_layer_weights
             layer_index += 1
         self.cumulative_pruning_rate = 0.0
 
@@ -236,8 +232,9 @@ class LotteryTicketPruner(object):
             current_weights = layer.get_weights()
             for index in indices:
                 mask = self.prune_masks_map[tpl][index]
-                if mask is not None:
-                    yield tpl, layer, index, [], current_weights[index], mask
+                if mask is not None:    # TODO - why would mask ever be none here?
+                    original_weights = self._original_weights_map[tpl][index]
+                    yield tpl, layer, index, original_weights, current_weights[index], mask
 
     def prune_weights(self, prune_percentage, prune_strategy):
         """ Prunes the specified percentage of the remaining unpruned weights from the model.

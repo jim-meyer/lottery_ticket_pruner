@@ -5,7 +5,7 @@ import keras
 import numpy as np
 
 import lottery_ticket_pruner
-from example.example import MNISTNoDropout
+from example.example import MNIST
 
 TEST_PRUNE_RATE = 0.5
 
@@ -27,7 +27,7 @@ class TestVerificationCallback(keras.callbacks.Callback):
         self.testcase._assert_weights_have_been_pruned()
 
 
-class MNISTTest(MNISTNoDropout):
+class MNISTTest(MNIST):
     def __init__(self, ):
         super().__init__('')
         self.pruner = None

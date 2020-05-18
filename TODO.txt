@@ -1,7 +1,6 @@
 TO DO
 -----
 Consider changing prune_weights() to calc_prune_mask() and apply_pruning() to apply_pruning(model)
-Include original weights in results returned by iterate_prunables()
 Implement same-sign pruning
 Run mnist, cifar10_reduced_10x 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise
@@ -30,3 +29,4 @@ Figure out why tox isn't showing proper code coverage numbers but `pytest --cov=
 Add copyrights to code
 Create example (using MNIST?)
 Removed restore_initial_weights() in favor of caller doing model.get_weights(), model.set_weights()
+Include original weights in results returned by iterate_prunables()
