@@ -21,14 +21,17 @@ import lottery_ticket_pruner
 class LoggingCheckpoint(keras.callbacks.Callback):
     def __init__(self, experiment):
         super().__init__()
-        self.experiment = experiment
-        self.epoch_data = {}
+        self.reset(experiment)
 
     def on_epoch_end(self, epoch, logs=None):
         super().on_epoch_end(epoch, logs)
         if epoch not in self.epoch_data:
             self.epoch_data[epoch] = collections.OrderedDict()
         self.epoch_data[epoch][self.experiment] = logs
+
+    def reset(self, experiment):
+        self.experiment = experiment
+        self.epoch_data = {}
 
 
 class MNIST(object):
@@ -66,6 +69,7 @@ class MNIST(object):
 
         self.x_train, self.y_train, self.x_test, self.y_test = x_train, y_train, x_test, y_test
 
+        self.experiment = experiment
         self.logging_callback = LoggingCheckpoint(experiment)
         self.callbacks = [self.logging_callback]
 
@@ -123,10 +127,11 @@ class MNIST(object):
         return model
 
     def fit(self, model, epochs):
+        self.logging_callback.reset(self.experiment)
         model.fit(self.x_train, self.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
-                  verbose=1,
+                  verbose=0,
                   validation_data=(self.x_test, self.y_test),
                   callbacks=self.callbacks)
 
@@ -154,7 +159,7 @@ class MNISTGloballyPruned(MNIST):
         model.fit(self.x_train, self.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
-                  verbose=1,
+                  verbose=0,
                   validation_data=(self.x_test, self.y_test),
                   callbacks=callbacks)
 
@@ -191,9 +196,10 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
     pruner = lottery_ticket_pruner.LotteryTicketPruner(model, original_model=original_model)
 
     # Evaluate performance of original model with pruning applied but no training at all
+    num_prune_rounds = 4
     prune_rate = 0.2
     overall_prune_rate = 0.0
-    for i in range(4):
+    for i in range(num_prune_rounds):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
@@ -209,7 +215,7 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
     # Now train from original weights and prune during training
     prune_rate = 0.2
     overall_prune_rate = 0.0
-    for i in range(4):
+    for i in range(num_prune_rounds):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
@@ -263,8 +269,10 @@ if __name__ == '__main__':
                         'See docs for LotteryTicketPruner.prune_weights() for full details.')
     args = parser.parse_args()
 
+    base_output_dir = os.path.dirname(__file__)
+
     for i in range(args.iterations):
-        output_dir = os.path.join(os.path.dirname(__file__), '{}_{}_{}_{}'.format(args.which_set, args.prune_strategy, args.epochs, i))
+        output_dir = os.path.join(base_output_dir, '{}_{}_{}_{}'.format(args.which_set, args.prune_strategy, args.epochs, i))
         os.makedirs(output_dir, exist_ok=True)
         losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.epochs, output_dir)
 
@@ -280,10 +288,10 @@ if __name__ == '__main__':
             row.extend([losses[key], accuracies[key]])
         results_df.loc[i] = row
 
-        results_df.to_csv(os.path.join(output_dir, 'results.csv'))
+        results_df.to_csv(os.path.join(base_output_dir, '{}_{}_{}_results.csv'.format(args.which_set, args.prune_strategy, args.epochs)))
         print(results_df)
 
     mean = results_df.mean(axis=0)
-    results_df.loc['average'] = row
-    results_df.to_csv(os.path.join(output_dir, 'results.csv'))
+    results_df.loc['average'] = mean
+    results_df.to_csv(os.path.join(base_output_dir, '{}_{}_{}_results.csv'.format(args.which_set, args.prune_strategy, args.epochs)))
     print(results_df)
