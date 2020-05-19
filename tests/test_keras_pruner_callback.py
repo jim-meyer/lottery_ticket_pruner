@@ -57,7 +57,7 @@ class TestKerasPrunerCallback(unittest.TestCase):
         self.pruner = lottery_ticket_pruner.LotteryTicketPruner(self.model)
 
     def _assert_weights_have_been_pruned(self):
-        for tpl, layer, index, original_weights, current_weights, current_mask in self.pruner.iterate_prunables():
+        for tpl, layer, index, original_weights, current_weights, current_mask in self.pruner.iterate_prunables(self.model):
             # Verify weights
             pruned_count = np.sum(current_weights == 0.0)
             self.assertEqual(np.prod(current_weights.shape) * TEST_PRUNE_RATE, pruned_count)
@@ -70,7 +70,7 @@ class TestKerasPrunerCallback(unittest.TestCase):
         epochs = 2
         # Can't do this in constructor of MNISTTest() since we have a chicken and egg problem
         self.mnist_test.init(self.pruner, TestVerificationCallback(self))
-        self.pruner.prune_weights(TEST_PRUNE_RATE, 'smallest_weights')
+        self.pruner.calc_prune_mask(self.model, TEST_PRUNE_RATE, 'smallest_weights')
 
         self.mnist_test.fit(self.model, epochs)
         self._assert_weights_have_been_pruned()

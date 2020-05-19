@@ -20,9 +20,9 @@ class PrunerCallback(keras.callbacks.Callback):
     def on_train_end(self, logs=None):
         super().on_train_end(logs)
         # Prune weights after training is completed so inference uses pruned weights
-        self.pruner.apply_pruning()
+        self.pruner.apply_pruning(self.model)
 
     def on_epoch_begin(self, epoch, logs=None):
         super().on_epoch_begin(epoch, logs)
         # End of epoch so prune the weights that we're pruning
-        self.pruner.apply_pruning()
+        self.pruner.apply_pruning(self.model)

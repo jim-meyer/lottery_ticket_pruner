@@ -139,11 +139,11 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertIn('prune_count', str(ex.exception))
 
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(), None, prune_percentage=0.0, prune_count=None)
+            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(model), None, prune_percentage=0.0, prune_count=None)
             self.assertEqual(1, warning.call_count)
 
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(), None, prune_percentage=None, prune_count=0)
+            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(model), None, prune_percentage=None, prune_count=0)
             self.assertEqual(1, warning.call_count)
 
     #
@@ -151,22 +151,23 @@ class TestLotteryTicketStateManager(unittest.TestCase):
     #
     def test_constructor(self):
         model1 = self._create_test_model()
-        model2 = self._create_test_mode_extra_layer()
 
         # Different number of layers
+        model2 = self._create_test_mode_extra_layer()
+        pruner = lottery_ticket_pruner.LotteryTicketPruner(model1)
         with self.assertRaises(ValueError) as ex:
-            _ = lottery_ticket_pruner.LotteryTicketPruner(model1, original_model=model2)
+            pruner.calc_prune_mask(model2, 0.2, 'smallest_weights')
         self.assertIn('must have the same number of layers', str(ex.exception))
 
         # Different shapes
         model2 = self._create_test_model_diff_shape(diff_input_shape=True)
         with self.assertRaises(ValueError) as ex:
-            _ = lottery_ticket_pruner.LotteryTicketPruner(model1, original_model=model2)
+            pruner.apply_pruning(model2)
         self.assertIn('must have the same input shape', str(ex.exception))
 
         model2 = self._create_test_model_diff_shape(diff_output_shape=True)
         with self.assertRaises(ValueError) as ex:
-            _ = lottery_ticket_pruner.LotteryTicketPruner(model1, original_model=model2)
+            pruner.calc_prune_mask(model2, 0.2, 'smallest_weights')
         self.assertIn('must have the same output shape', str(ex.exception))
 
     #
@@ -179,7 +180,7 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         interesting_weights_index = 0
         tpl = tuple([interesting_layer_index, tuple([interesting_weights_index])])
 
-        pruner.prune_weights(0.2, 'smallest_weights')
+        pruner.calc_prune_mask(model, 0.2, 'smallest_weights')
         pruner.reset()
 
         reset_mask = np.array(pruner.prune_masks_map[tpl][interesting_weights_index])
@@ -199,7 +200,7 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertEqual(TEST_DENSE_WEIGHT_COUNT, np.sum(original_mask))
 
         # Prune and make sure prune mask has changed
-        pruner.prune_weights(0.2, 'smallest_weights')
+        pruner.calc_prune_mask(model, 0.2, 'smallest_weights')
         pruned_mask = pruner.prune_masks_map[tpl][interesting_weights_index]
         num_pruned = np.sum(pruned_mask)
         self.assertLess(num_pruned, TEST_DENSE_WEIGHT_COUNT)
@@ -210,7 +211,7 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertEqual(TEST_DENSE_WEIGHT_COUNT, np.sum(reset_mask))
 
     #
-    # prune_weights()
+    # calc_prune_mask()
     #   'smallest_weights'
     #
     def test_smallest_weights(self):
@@ -230,23 +231,25 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         interesting_layer.set_weights([dl_test_weights, interesting_layer.get_weights()[1]])
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
-        pruner.prune_weights(0.5, 'smallest_weights')
+        pruner.calc_prune_mask(model, 0.5, 'smallest_weights')
+        num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
+        self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.5))
+
+        pruner.apply_pruning(model)
         actual_weights = interesting_layer.get_weights()
         actual_weights[0][actual_weights[0] == 0.0] = math.inf
         min_weight = np.min(actual_weights[0])
         self.assertGreaterEqual(min_weight, int(interesting_layer_weight_count * 0.5))
 
+        pruner.calc_prune_mask(model, 0.2, 'smallest_weights')
         num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
-        self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.5))
+        self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.6))
 
-        pruner.prune_weights(0.2, 'smallest_weights')
+        pruner.apply_pruning(model)
         actual_weights = interesting_layer.get_weights()
         actual_weights[0][actual_weights[0] == 0.0] = math.inf
         min_weight = np.min(actual_weights[0])
         self.assertGreaterEqual(min_weight, int(interesting_layer_weight_count * 0.6))
-
-        num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
-        self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.6))
 
     def test_smallest_weights_2(self):
         model = self._create_test_model()
@@ -263,7 +266,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
         prune_rate = 0.5
-        pruner.prune_weights(prune_rate, 'smallest_weights')
+        pruner.calc_prune_mask(model, prune_rate, 'smallest_weights')
+        pruner.apply_pruning(model)
         actual_weights = interesting_layer.get_weights()
         min_expected_pos = TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate // 2 - 1
         max_expected_neg = -TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate // 2 + 1
@@ -277,7 +281,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         # Prune again
         prune_rate2 = 0.1
         expected_to_be_pruned2 = int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate2 * (1.0 - prune_rate))
-        pruner.prune_weights(prune_rate2, 'smallest_weights')
+        pruner.calc_prune_mask(model, prune_rate2, 'smallest_weights')
+        pruner.apply_pruning(model)
         actual_weights = interesting_layer.get_weights()
         min_expected_pos = expected_to_be_pruned2 // 2 - 1
         max_expected_neg = -expected_to_be_pruned2 // 2 + 1
@@ -305,14 +310,15 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
         prune_rate = 0.5
-        pruner.prune_weights(prune_rate, 'smallest_weights')
+        pruner.calc_prune_mask(model, prune_rate, 'smallest_weights')
+        pruner.apply_pruning(model)
         actual_weights = interesting_layer.get_weights()
         expected = int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate)
         actual = np.sum(actual_weights[0])
         self.assertEqual(expected, actual)
 
     #
-    # prune_weights()
+    # calc_prune_mask()
     #   'smallest_weights_global'
     #
     def test_smallest_weights_global(self):
@@ -338,9 +344,22 @@ class TestLotteryTicketStateManager(unittest.TestCase):
 
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
-        prune_rate = 0.5
-        pruner.prune_weights(prune_rate, 'smallest_weights_global')
+        num_pruned1 = 0
+        for layer in interesting_layers:
+            weights = layer.get_weights()
+            num_pruned1 += np.sum(weights[interesting_weight_index] == 0.0)
 
+        prune_rate = 0.5
+        pruner.calc_prune_mask(model, prune_rate, 'smallest_weights_global')
+
+        # calc_prune_mask() shouldn't do the actual pruning so verify that weights didn't change
+        num_pruned2 = 0
+        for layer in interesting_layers:
+            weights = layer.get_weights()
+            num_pruned2 += np.sum(weights[interesting_weight_index] == 0.0)
+        self.assertEqual(num_pruned1, num_pruned2)
+
+        pruner.apply_pruning(model)
         pruned_counts = []
         for layer in interesting_layers:
             weights = layer.get_weights()
@@ -359,7 +378,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         total_prune_rate = prune_rate
         prune_rate = 0.2
         total_prune_rate = total_prune_rate + (1.0 - total_prune_rate) * prune_rate
-        pruner.prune_weights(prune_rate, 'smallest_weights_global')
+        pruner.calc_prune_mask(model, prune_rate, 'smallest_weights_global')
+        pruner.apply_pruning(model)
 
         pruned_counts = []
         for layer in interesting_layers:
@@ -376,23 +396,23 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertEqual(6, pruned_counts[2])
 
     #
-    # prune_weights()
+    # calc_prune_mask()
     #   negative
     #
-    def test_prune_weights_negative(self):
+    def test_calc_prune_mask_negative(self):
         model = self._create_test_model()
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
         with self.assertRaises(ValueError) as ex:
-            _ = pruner.prune_weights(0.3, 'unknown_strategy')
+            _ = pruner.calc_prune_mask(model, 0.3, 'unknown_strategy')
         self.assertIn('smallest_weights', str(ex.exception))
         self.assertIn('smallest_weights_global', str(ex.exception))
 
         with self.assertRaises(ValueError) as ex:
-            _ = pruner.prune_weights(-0.25, 'smallest_weights_global')
+            _ = pruner.calc_prune_mask(model, -0.25, 'smallest_weights_global')
         self.assertIn('inclusive', str(ex.exception))
 
         with self.assertRaises(ValueError) as ex:
-            _ = pruner.prune_weights(1.1, 'smallest_weights_global')
+            _ = pruner.calc_prune_mask(model, 1.1, 'smallest_weights_global')
         self.assertIn('inclusive', str(ex.exception))
 
     #
@@ -411,15 +431,15 @@ class TestLotteryTicketStateManager(unittest.TestCase):
 
         # No pruning percent specified so no weight should change
         initial_model_weights_sum = self._summed_model_weights(model)
-        pruner.apply_pruning()
+        pruner.apply_pruning(model)
         new_model_weights_sum = self._summed_model_weights(model)
         self.assertEqual(initial_model_weights_sum, new_model_weights_sum)
 
-        pruner.prune_weights(0.5, 'random')
+        pruner.calc_prune_mask(model, 0.5, 'random')
         num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
         self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.5))
 
-        pruner.prune_weights(0.2, 'random')
+        pruner.calc_prune_mask(model, 0.2, 'random')
         num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
         self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.6))
 
@@ -427,7 +447,7 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         new_model_weights_sum = self._summed_model_weights(model)
         self.assertEqual(initial_model_weights_sum, new_model_weights_sum)
 
-        pruner.apply_pruning()
+        pruner.apply_pruning(model)
         num_masked = np.sum(pruner.prune_masks_map[interesting_key][0] == 0)
         self.assertEqual(num_masked, int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * 0.6))
 

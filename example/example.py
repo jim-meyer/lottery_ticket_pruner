@@ -131,7 +131,7 @@ class MNIST(object):
         model.fit(self.x_train, self.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
-                  verbose=0,
+                  verbose=1,
                   validation_data=(self.x_test, self.y_test),
                   callbacks=self.callbacks)
 
@@ -159,7 +159,7 @@ class MNISTGloballyPruned(MNIST):
         model.fit(self.x_train, self.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
-                  verbose=0,
+                  verbose=1,
                   validation_data=(self.x_test, self.y_test),
                   callbacks=callbacks)
 
@@ -193,7 +193,7 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
     epoch_logs = mnist.get_epoch_logs()
 
     # Use the weights from the trained model as the basis for determining what weights we'll prune for the new model.
-    pruner = lottery_ticket_pruner.LotteryTicketPruner(model, original_model=original_model)
+    pruner = lottery_ticket_pruner.LotteryTicketPruner(original_model)
 
     # Evaluate performance of original model with pruning applied but no training at all
     num_prune_rounds = 4
@@ -203,9 +203,9 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
-        pruner.prune_weights(prune_rate, prune_strategy)
+        pruner.calc_prune_mask(model, prune_rate, prune_strategy)
         model.set_weights(starting_weights)
-        pruner.apply_pruning()
+        pruner.apply_pruning(model)
 
         experiment = 'MNIST_no_training_pruned@{:.3f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
@@ -219,9 +219,10 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
-        pruner.prune_weights(prune_rate, prune_strategy)
+        pruner.calc_prune_mask(model, prune_rate, prune_strategy)
         model.set_weights(starting_weights)
-        pruner.apply_pruning()
+        # MNISTGloballyPruned will prune before each epoch so no need to do it here
+        # pruner.apply_pruning(model)
 
         experiment = 'MNIST_pruned@{:.3f}'.format(overall_prune_rate)
         mnist_pruned = MNISTGloballyPruned(experiment, pruner, which_set=which_set)
@@ -266,7 +267,7 @@ if __name__ == '__main__':
              'useful for evaluating these pruning strategies using less data')
     parser.add_argument('--prune_strategy', type=str, required=False, default='smallest_weights_global',
         help='Which pruning strategy to use. Must be one of "random", "smallest_weights", "smallest_weights_global".'
-                        'See docs for LotteryTicketPruner.prune_weights() for full details.')
+                        'See docs for LotteryTicketPruner.calc_prune_mask() for full details.')
     args = parser.parse_args()
 
     base_output_dir = os.path.dirname(__file__)
