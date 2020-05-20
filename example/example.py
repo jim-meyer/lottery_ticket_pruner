@@ -231,7 +231,8 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
         losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(model)
 
         epoch_logs2 = mnist_pruned.get_epoch_logs()
-        for epoch in epoch_logs.keys():
+        assert len(epoch_logs) == epochs
+        for epoch in range(epochs):
             epoch_logs[epoch].update(epoch_logs2[epoch])
 
         # Periodically save the results to allow inspection during these multiple lengthy iterations
@@ -244,10 +245,11 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
         headings.extend([experiment, '', '', ''])
     sub_headings = ['train_loss', 'train_acc', 'val_loss', 'val_acc'] * len(epoch_logs[0])
     epoch_logs_df = pd.DataFrame([], columns=[headings, sub_headings])
-    for epoch in range(len(epoch_logs)):
+    assert len(epoch_logs) == epochs
+    for epoch in range(epochs):
         row = []
         for experiment in epoch_logs[epoch].keys():
-            exp_dict = epoch_logs[i][experiment]
+            exp_dict = epoch_logs[epoch][experiment]
             row.extend([exp_dict['loss'], exp_dict['acc'], exp_dict['val_loss'], exp_dict['val_acc']])
         epoch_logs_df.loc[epoch] = row
     epoch_logs_df.to_csv(os.path.join(output_dir, 'epoch_logs.csv'))
