@@ -1,6 +1,5 @@
 import argparse
 import collections
-import copy
 import json
 import os
 
@@ -182,20 +181,19 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
     mnist = MNIST(experiment, which_set=which_set)
     model = mnist.create_model()
     starting_weights = model.get_weights()
-    original_model = copy.deepcopy(model)
+
+    pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
     experiment = 'MNIST_no_training'
     losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     experiment = 'MNIST'
     mnist.fit(model, epochs)
+    trained_weights = model.get_weights()
     losses[experiment], accuracies[experiment] = mnist.evaluate(model)
     epoch_logs = mnist.get_epoch_logs()
 
-    # Use the weights from the trained model as the basis for determining what weights we'll prune for the new model.
-    pruner = lottery_ticket_pruner.LotteryTicketPruner(model, original_model=original_model)
-
-    # Evaluate performance of original model with pruning applied but no training at all
+    # Evaluate performance of model with original weights and pruning applied
     num_prune_rounds = 4
     prune_rate = 0.2
     overall_prune_rate = 0.0
@@ -203,14 +201,20 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
-        pruner.prune_weights(prune_rate, prune_strategy)
+        # Make sure each iteration of pruning uses that same trained weights to determine pruning mask
+        model.set_weights(trained_weights)
+        pruner.calc_prune_mask(model, prune_rate, prune_strategy)
+        # Now revert model to original random starting weights and apply pruning
         model.set_weights(starting_weights)
-        pruner.apply_pruning()
+        pruner.apply_pruning(model)
 
         experiment = 'MNIST_no_training_pruned@{:.3f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     pruner.reset_masks()
+
+    # Calculate pruning mask below using trained weights
+    model.set_weights(trained_weights)
 
     # Now train from original weights and prune during training
     prune_rate = 0.2
@@ -219,15 +223,16 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
         prune_rate = pow(prune_rate, 1.0 / (i + 1))
         overall_prune_rate = overall_prune_rate + prune_rate * (1.0 - overall_prune_rate)
 
-        pruner.prune_weights(prune_rate, prune_strategy)
-        model.set_weights(starting_weights)
-        pruner.apply_pruning()
+        # Calculate the pruning mask using the trained model and it's final trained weights
+        pruner.calc_prune_mask(model, prune_rate, prune_strategy)
 
+        # Now create a new model that has the original random starting weights and train it
         experiment = 'MNIST_pruned@{:.3f}'.format(overall_prune_rate)
         mnist_pruned = MNISTGloballyPruned(experiment, pruner, which_set=which_set)
-        model = mnist_pruned.create_model()
-        mnist_pruned.fit(model, epochs)
-        losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(model)
+        prune_trained_model = mnist_pruned.create_model()
+        prune_trained_model.set_weights(starting_weights)
+        mnist_pruned.fit(prune_trained_model, epochs)
+        losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(prune_trained_model)
 
         epoch_logs2 = mnist_pruned.get_epoch_logs()
         assert len(epoch_logs) == epochs
@@ -268,7 +273,7 @@ if __name__ == '__main__':
              'useful for evaluating these pruning strategies using less data')
     parser.add_argument('--prune_strategy', type=str, required=False, default='smallest_weights_global',
         help='Which pruning strategy to use. Must be one of "random", "smallest_weights", "smallest_weights_global".'
-                        'See docs for LotteryTicketPruner.prune_weights() for full details.')
+                        'See docs for LotteryTicketPruner.calc_prune_mask() for full details.')
     args = parser.parse_args()
 
     base_output_dir = os.path.dirname(__file__)

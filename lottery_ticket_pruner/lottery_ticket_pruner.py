@@ -137,32 +137,12 @@ class LotteryTicketPruner(object):
     This class prunes weights from a model and keeps internal state to track which weights have been pruned.
     Inspired from https://arxiv.org/pdf/1803.03635.pdf, "THE LOTTERY TICKET HYPOTHESIS: FINDING SPARSE, TRAINABLE NEURAL NETWORKS"
     """
-    def __init__(self, model, original_model=None):
+    def __init__(self, original_model):
         """
-        :param model: The model being trained and that will be pruned.
-        :param original_model: (optional) The model containing the original weights to be used by the pruning logic to
-            determine which weights of the model being trained are to be pruned.
-            If `None` then the original weights are taken from `model`.
+        :param original_model: The model containing the original weights to be used by the pruning logic to determine
+            which weights of the model being trained are to be pruned.
+            Some pruning strategies require access to the initial weights of the model to determine the pruning mask.
         """
-        self.model = model
-
-        if original_model is None:
-            original_model = model
-        else:
-            if len(self.model.layers) != len(original_model.layers):
-                raise ValueError('`model` and `original_model` must have the same number of layers ({} vs {}'.format(
-                    len(self.model.layers), len(original_model.layers)))
-            for layer, original_layer in zip(self.model.layers, original_model.layers):
-                if (hasattr(layer, 'input_shape') or hasattr(original_layer, 'input_shape')) and layer.input_shape != original_layer.input_shape:
-                    raise ValueError(
-                        'All layers in `model` and `original_model` must have the same input shape ({}/{} vs {}/{})'.format(
-                            layer.name, layer.input_shape, original_layer.name, original_layer.input_shape))
-
-                if (hasattr(layer, 'output_shape') or hasattr(original_layer, 'output_shape')) and layer.output_shape != original_layer.output_shape:
-                    raise ValueError(
-                        'All layers in `model` and `original_model` must have the same output shape ({}/{} vs {}/{})'.format(
-                            layer.name, layer.output_shape, original_layer.name, original_layer.output_shape))
-
         # Now determine which weights of which layers are prunable
         layer_index = 0
         # An array of (layer index, [weight indices (ints)]) tuples of weights that are prunable.
@@ -171,6 +151,8 @@ class LotteryTicketPruner(object):
         self.prune_masks_map = {}
         self.prunable_weights_map = {}
         self._original_weights_map = {}
+        self.layer_input_shapes = []
+        self.layer_output_shapes = []
         for layer in original_model.layers:
             layer_weights = layer.get_weights()
             prune_masks = [None] * len(layer_weights)
@@ -188,8 +170,25 @@ class LotteryTicketPruner(object):
                 self.prunable_tuples.append(tpl)
                 self.prune_masks_map[tpl] = prune_masks
                 self._original_weights_map[tpl] = original_layer_weights
+            self.layer_input_shapes.append(getattr(layer, 'input_shape', None))
+            self.layer_output_shapes.append(getattr(layer, 'output_shape', None))
             layer_index += 1
         self.cumulative_pruning_rate = 0.0
+
+    def _verify_compatible_model(self, model):
+        if len(model.layers) != len(self.layer_input_shapes):
+            raise ValueError('`model` must have the same number of layers as the original model used to create this instance ({} vs {}'.format(
+                len(model.layers), len(self.layer_input_shapes)))
+        for layer, input_shape, output_shape in zip(model.layers, self.layer_input_shapes, self.layer_output_shapes):
+            if getattr(layer, 'input_shape', None) != input_shape:
+                raise ValueError(
+                    'All layers in `model` and `original_model` must have the same input shape for layer {} ({} vs {})'.format(
+                        layer.name, getattr(layer, 'input_shape', None), input_shape))
+
+            if getattr(layer, 'output_shape', None) != output_shape:
+                raise ValueError(
+                    'All layers in `model` and `original_model` must have the same output shape {} ({} vs {})'.format(
+                        layer.name, getattr(layer, 'output_shape', None), output_shape))
 
     def _prunable(self, layer, weights):
         return isinstance(layer, (keras.layers.Conv1D,
@@ -220,15 +219,17 @@ class LotteryTicketPruner(object):
         assert self.prune_masks_map[tpl][index] is not None
         self.prune_masks_map[tpl][index] = new_mask
 
-    def iterate_prunables(self):
+    def iterate_prunables(self, model):
         """ Returns iterator over all prunable weights in all layers of the model.
         returns: tuple of (tpl<layer index, index of weights in layer>, layer, index of these weights in layer's weights array,
                             prune percentage, original weights, current weights, prune mask)
         """
+        self._verify_compatible_model(model)
+
         for tpl in self.prunable_tuples:
             layer_index = tpl[0]
             indices = tpl[1]
-            layer = self.model.layers[layer_index]
+            layer = model.layers[layer_index]
             current_weights = layer.get_weights()
             for index in indices:
                 mask = self.prune_masks_map[tpl][index]
@@ -236,13 +237,15 @@ class LotteryTicketPruner(object):
                     original_weights = self._original_weights_map[tpl][index]
                     yield tpl, layer, index, original_weights, current_weights[index], mask
 
-    def prune_weights(self, prune_percentage, prune_strategy):
+    def calc_prune_mask(self, model, prune_percentage, prune_strategy):
         """ Prunes the specified percentage of the remaining unpruned weights from the model.
         This updates the model's weights such that they are now pruned.
         This also updates the internal pruned weight masks managed by this instance. @see `apply_pruning()`
+        :param model: The model that contains the current weights to be used to calculate the pruning mask.
+            Typically this is the model being trained while being pruned every epoch.
         :param float prune_percentage: The percentage *of remaining unpruned weights* to be pruned.
             Note that these pruning percentages are cumulative within an instance of this class.
-            E.g. Calling `prune_weights()` twice, once with 0.5 and again with 0.2 will result in 60% pruning.
+            E.g. Calling `calc_prune_mask()` twice, once with 0.5 and again with 0.2 will result in 60% pruning.
                 (0.5 + (1.0 - 0.5) * 0.2) = 0.60
         :param string prune_strategy: A string indicating how the pruning should be done.
             'random': Pruning is done randomly across all prunable layers.
@@ -254,6 +257,7 @@ class LotteryTicketPruner(object):
         """
         if not (0.0 < prune_percentage < 1.0):
             raise ValueError('"prune_percentage" must be between 0.0 and 1.0 inclusive but it was {}'.format(prune_percentage))
+        self._verify_compatible_model(model)
 
         # Convert from percentage of remaining to percentage overall since the latter is easier for pruning functions to use
         actual_prune_percentage = (1.0 - self.cumulative_pruning_rate) * prune_percentage
@@ -263,25 +267,24 @@ class LotteryTicketPruner(object):
         global_prune_strats = {'smallest_weights_global': _prune_func_smallest_weights_global}
         if prune_strategy in local_prune_strats:
             local_prune_func = local_prune_strats[prune_strategy]
-            for tpl, layer, index, original_weights, current_weights, mask in self.iterate_prunables():
+            for tpl, layer, index, original_weights, current_weights, mask in self.iterate_prunables(model):
                 new_mask = local_prune_func(original_weights, current_weights, mask, actual_prune_percentage)
                 self.prune_masks_map[tpl][index] = new_mask
         elif prune_strategy in global_prune_strats:
             global_prune_func = global_prune_strats[prune_strategy]
-            global_prune_func(self.iterate_prunables(), self._update_mask, prune_percentage=actual_prune_percentage)
+            global_prune_func(self.iterate_prunables(model), self._update_mask, prune_percentage=actual_prune_percentage)
         else:
             all_keys = set(local_prune_strats.keys()).union(set(global_prune_strats.keys()))
             raise ValueError('"prune_strategy" must be one of {}'.format(all_keys))
 
-        # Now prune the weights from the model's layers
-        self.apply_pruning()
-
-    def apply_pruning(self):
+    def apply_pruning(self, model):
         """ Applies the existing pruning masks to the model's weights """
+        self._verify_compatible_model(model)
+
         for tpl in self.prunable_tuples:
             layer_index = tpl[0]
             weight_indices = tpl[1]
-            layer = self.model.layers[layer_index]
+            layer = model.layers[layer_index]
             prune_masks = self.prune_masks_map[tpl]
 
             layer_weights = layer.get_weights()
