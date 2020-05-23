@@ -1,4 +1,3 @@
-""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
 import logging
 import math
 import sys
@@ -305,7 +304,9 @@ class LotteryTicketPruner(object):
             model.set_weights(initial_weights)
             # Now train the model using pruning
             pruner.calc_prune_mask(model, 0.5, 'large_final')
+            untrained_loss, untrained_accuracy = model.evaluate(x_test, y_test)
             model.fit(X, y, callbacks=[PrunerCallback(pruner)])
+            trained_loss, trained_accuracy = model.evaluate(x_test, y_test)
         """
         self._verify_compatible_model(pretrained_model)
 

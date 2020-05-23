@@ -1,4 +1,3 @@
-""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
 import logging
 import math
 import random

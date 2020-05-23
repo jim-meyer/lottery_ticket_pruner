@@ -1,12 +1,14 @@
-""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
 import setuptools
+
+import lottery_ticket_pruner
+
 
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name='lottery-ticket-pruner-JIM-MEYER',
-    version='0.0.1',
+    version=lottery_ticket_pruner.__version__,
     author='Jim Meyer',
     author_email='jimm@racemed.com',
     description='Enables pruning of Keras DNNs using "lottery ticket" pruning',

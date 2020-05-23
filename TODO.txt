@@ -1,9 +1,6 @@
 TO DO
 -----
-Document the example better
 Implement same-sign pruning
-Review what all I should leave copyright in and what I shouldn't.
-Also check to see if including MIT license in the files is a good idea.
 Run mnist, cifar10_reduced_10x 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise
 Address all outstanding TODOs
@@ -35,3 +32,7 @@ Include original weights in results returned by iterate_prunables()
 Consider changing prune_weights() to calc_prune_mask() and apply_pruning() to apply_pruning(model)
 Implement 'large_final' pruning strategy
 Implement Dynamic Weight Rescaling
+Document the example better
+Review what all I should leave copyright in and what I shouldn't.
+Also check to see if including MIT license in the files is a good idea.
+ANSWER: A single LICENSE file at root is sufficient.

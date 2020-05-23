@@ -1,4 +1,7 @@
-""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
+"""
+An example of how to evaluate a classically trained CNN and a CNN trained using Lottery Ticket pruning.
+This same can be readily adapted for other models including DNNs.
+"""
 import argparse
 import collections
 import json
@@ -19,6 +22,9 @@ import lottery_ticket_pruner
 
 
 class LoggingCheckpoint(keras.callbacks.Callback):
+    """ A keras checkpoint that is used during training to capture the test and validation losses and accuracies.
+    This allows comparison between normal (unpruned) training and lottery ticket pruning on an epoch by epoch basis.
+    """
     def __init__(self, experiment):
         super().__init__()
         self.reset(experiment)
@@ -35,6 +41,8 @@ class LoggingCheckpoint(keras.callbacks.Callback):
 
 
 class MNIST(object):
+    """ A class that can be used to create, train and evaluate a model on the MNIST or CIFAR10 datasets.
+    """
     def __init__(self, experiment, which_set='mnist'):
         self.batch_size = 128
         self.num_classes = 10
@@ -74,6 +82,10 @@ class MNIST(object):
         self.callbacks = [self.logging_callback]
 
     def load_cifar10_data(self):
+        """ Initialized the instance for training with the full CIFAR dataset.
+        :returns The CIFAR dataset divided up into training, testing samples.
+            (X train, y train, X test, y test)
+        """
         # input image dimensions
         self.img_rows, self.img_cols = 32, 32
         self.channels = 3
@@ -82,6 +94,10 @@ class MNIST(object):
         return (x_train, y_train), (x_test, y_test)
 
     def load_cifar10_reduced_10x_data(self):
+        """ Initialized the instance for training with 1/10th of the samples in the CIFAR dataset.
+        :returns 1/10th of the CIFAR dataset divided up into training, testing samples.
+            (X train, y train, X test, y test)
+        """
         (x_train, y_train), (x_test, y_test) = self.load_cifar10_data()
 
         def get_first_n(X, y, classes, n):
@@ -102,6 +118,10 @@ class MNIST(object):
         return (x_train, y_train), (x_test, y_test)
 
     def load_mnist_data(self):
+        """ Initialized the instance for training with the MNIST dataset.
+        :returns The MNIST dataset divided up into training, testing samples.
+            (X train, y train, X test, y test)
+        """
         # input image dimensions
         self.img_rows, self.img_cols = 28, 28
         self.channels = 1
@@ -150,17 +170,21 @@ class MNIST(object):
 
 
 class MNISTPruned(MNIST):
+    """ A class that can be used to create, train and evaluate a model on the MNIST or CIFAR10 datasets.
+    When training the model this class will apply lottery ticket pruning after every epoch.
+    """
     def __init__(self, experiment, pruner, use_dwr=False, which_set='mnist'):
         """
-        :param experiment:
-        :param pruner:
+        :param experiment: A string that describes the experiment being evaluated.
+        :param pruner: A `LotteryTicketPruner` instance that is used to prune the weights after every epoch of training.
         :param use_dwr: If True then the callback will apply Dynamic Weight Rescaling (DWR) to the unpruned weights in
             the model after every epoch.
             See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.
             A quote from that paper describes it best:
                 "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the total
                 number of weights in the layer over the number of ones in the corresponding mask."
-        :param which_set:
+        :param which_set: One of 'mnist', 'cifar10', 'cifar10_reduced_10x'.
+            See `evaluate()` for more info on what these mean.
         """
         super().__init__(experiment, which_set=which_set)
         self.pruner = pruner
@@ -184,6 +208,33 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
                 pruning has been done prior to evaluation.
             Several models trained from randomly initialized weights *but* with lottery ticket pruning applied at the
                 end of every epoch.
+        :param which_set: One of 'mnist', 'cifar10', 'cifar10_reduced_10x'.
+            'mnist' is the standard MNIST data set (70k total images of digits 0-9).
+            'cifar10' is the standard CIFAR10 data set (60k total images in 10 classes, 6k images/class)
+            'cifar10_reduced_10x' is just like 'cifar10' but with the total training, test sets reduced by 10x.
+                (6k total images in 10 classes, 600 images/class).
+                This is useful for seeing the effects of lottery ticket pruning on a smaller dataset.
+        :param prune_strategy: One of the strategies supported by `LotteryTicketPruner.calc_prune_mask()`
+            A string indicating how the pruning should be done.
+                'random': Pruning is done randomly across all prunable layers.
+                'smallest_weights': The smallest weights at each prunable layer are pruned. Each prunable layer has the
+                    specified percentage pruned from the layer's weights.
+                'smallest_weights_global': The smallest weights across all prunable layers are pruned. Some layers may have
+                    substantially more or less weights than `prune_percentage` pruned from them. But overall, across all
+                    prunable layers, `prune_percentage` weights will be pruned.
+                'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
+                    This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
+                'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
+                    This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
+                'large_final_same_sign': TODO - "same sign" logic needs to be applied once to the model prior to training,
+                    not during pruning.
+        :param boolean use_dwr: Whether or not to apply Dynamic Weight Rescaling (DWR) to the unpruned weights in the model.
+            See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.
+            A quote from that paper describes it best:
+                "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the total
+                number of weights in the layer over the number of ones in the corresponding mask."
+        :param epochs: The number of epochs to train the models for.
+        :param output_dir: The directory to put output files.
         :returns losses and accuracies for the evaluations. Each are a dict of keyed by experiment name and whose value
             is the loss/accuracy.
     """
