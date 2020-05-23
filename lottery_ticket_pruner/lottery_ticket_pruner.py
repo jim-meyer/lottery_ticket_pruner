@@ -92,6 +92,7 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
     """
     if prune_percentage is None and prune_count is None:
         raise ValueError('Either `prune_percentage` or `prune_count` must be specified')
+
     weight_counts = []
     all_weights_abs = []
     current_mask_flat = []
@@ -123,14 +124,6 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
         weight_count = np.prod(current_weights.shape)
         logger.debug('Globally pruning {} of {} ({:.2f}%) smallest weights of layer {}/{}'.format(pruned_count, weight_count, pruned_count / weight_count * 100, layer.name, index))
         update_mask_func(tpl, index, new_mask)
-
-
-def dynamically_rescale_weights():
-    """ Rescale unmasked weights by multiply the underlying weights by the ratio of the total number of weights in the
-     layer over the number of ones in the corresponding mask.
-    See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf
-    """
-    pass
 
 
 def _prune_func_large_final(prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None):
@@ -200,17 +193,12 @@ class LotteryTicketPruner(object):
     This class prunes weights from a model and keeps internal state to track which weights have been pruned.
     Inspired from https://arxiv.org/pdf/1803.03635.pdf, "THE LOTTERY TICKET HYPOTHESIS: FINDING SPARSE, TRAINABLE NEURAL NETWORKS"
     """
-    def __init__(self, initial_model, use_dwr=False):
+    def __init__(self, initial_model):
         """
         :param initial_model: The model containing the initial weights to be used by the pruning logic to determine
             which weights of the model being trained are to be pruned.
             Some pruning strategies require access to the initial weights of the model to determine the pruning mask.
-        :param use_dwr: True means apply Dynamic Weight Rescaling per section 5.2 of https://arxiv.org/pdf/1905.01067.pdf.
-        A quote from that paper describes it best:
-            "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the total
-            number of weights in the layer over the number of ones in the corresponding mask."
         """
-        self.use_dwr = use_dwr
 
         # Now determine which weights of which layers are prunable
         layer_index = 0
@@ -274,7 +262,18 @@ class LotteryTicketPruner(object):
                                   keras.layers.Dense,
                                   )) and len(weights.shape) > 1
 
-    def _apply_dwr(self, model):
+    def apply_dwr(self, model):
+        """ Applies Dynamic Weight Rescaling (DWR) to the unpruned weights in the model.
+        See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.
+        A quote from that paper describes it best:
+            "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the total
+            number of weights in the layer over the number of ones in the corresponding mask."
+        The typical use of this is to call `apply_dwr()` right after `apply_pruning()` per the above paper.
+        This is left as a separate step, and not done implicitly by `apply_pruning()`, since whereas `apply_pruning()`
+        can be called repeatedly with effect beyond the first call, `apply_dwr()` should be called exactly once after
+        `apply_pruning()` if DWR is desired.
+        :param model: The model whose unpruned weights should be rescaled.
+        """
         for tpl, layer, index, _, _, current_weights, mask in self.iterate_prunables(model):
             num_weights = np.prod(current_weights.shape)
             num_ones = np.sum(mask == 1)
@@ -376,7 +375,7 @@ class LotteryTicketPruner(object):
             'large_final_same_sign': TODO - "same sign" logic needs to be applied once to the model prior to training, not during pruning.
         """
         if not (0.0 < prune_percentage < 1.0):
-            raise ValueError('"prune_percentage" must be between 0.0 and 1.0 inclusive but it was {}'.format(prune_percentage))
+            raise ValueError('"prune_percentage" must be between 0.0 and 1.0 exclusive but it was {}'.format(prune_percentage))
         self._verify_compatible_model(model)
 
         # Convert from percentage of remaining to percentage overall since the latter is easier for pruning functions to use
@@ -397,9 +396,6 @@ class LotteryTicketPruner(object):
         else:
             all_keys = set(local_prune_strats.keys()).union(set(global_prune_strats.keys()))
             raise ValueError('"prune_strategy" must be one of {}'.format(all_keys))
-
-        if self.use_dwr:
-            self._apply_dwr(model)
 
     def apply_pruning(self, model):
         """ Applies the existing pruning masks to the model's weights """

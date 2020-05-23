@@ -1,6 +1,9 @@
 TO DO
 -----
+Document the example better
 Implement same-sign pruning
+Review what all I should leave copyright in and what I shouldn't.
+Also check to see if including MIT license in the files is a good idea.
 Run mnist, cifar10_reduced_10x 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise
 Address all outstanding TODOs

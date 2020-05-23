@@ -1,3 +1,4 @@
+""" Copyright (C) 2020 Jim Meyer <jimm@racemed.com> """
 import argparse
 import collections
 import json
@@ -148,13 +149,25 @@ class MNIST(object):
         return self.logging_callback.epoch_data
 
 
-class MNISTGloballyPruned(MNIST):
-    def __init__(self, experiment, pruner, which_set='mnist'):
+class MNISTPruned(MNIST):
+    def __init__(self, experiment, pruner, use_dwr=False, which_set='mnist'):
+        """
+        :param experiment:
+        :param pruner:
+        :param use_dwr: If True then the callback will apply Dynamic Weight Rescaling (DWR) to the unpruned weights in
+            the model after every epoch.
+            See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.
+            A quote from that paper describes it best:
+                "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the total
+                number of weights in the layer over the number of ones in the corresponding mask."
+        :param which_set:
+        """
         super().__init__(experiment, which_set=which_set)
         self.pruner = pruner
+        self.use_dwr = use_dwr
 
     def fit(self, model, epochs):
-        callbacks = self.callbacks + [lottery_ticket_pruner.PrunerCallback(self.pruner)]
+        callbacks = self.callbacks + [lottery_ticket_pruner.PrunerCallback(self.pruner, use_dwr=self.use_dwr)]
         model.fit(self.x_train, self.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
@@ -163,7 +176,7 @@ class MNISTGloballyPruned(MNIST):
                   callbacks=callbacks)
 
 
-def evaluate(which_set, prune_strategy, epochs, output_dir):
+def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
     """ Evaluates multiple training approaches:
             A model with randomly initialized weights evaluated with no training having been done
             A model trained from randomly initialized weights
@@ -229,7 +242,7 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
 
         # Now create a new model that has the original random starting weights and train it
         experiment = 'MNIST_pruned@{:.3f}'.format(overall_prune_rate)
-        mnist_pruned = MNISTGloballyPruned(experiment, pruner, which_set=which_set)
+        mnist_pruned = MNISTPruned(experiment, pruner, use_dwr=use_dwr, which_set=which_set)
         prune_trained_model = mnist_pruned.create_model()
         prune_trained_model.set_weights(starting_weights)
         mnist_pruned.fit(prune_trained_model, epochs)
@@ -275,6 +288,8 @@ if __name__ == '__main__':
     parser.add_argument('--prune_strategy', type=str, required=False, default='smallest_weights_global',
         help='Which pruning strategy to use. Must be one of "random", "smallest_weights", "smallest_weights_global".'
                         'See docs for LotteryTicketPruner.calc_prune_mask() for full details.')
+    parser.add_argument('--dwr', action='store_true',
+        help='Dynamice Weight Rescaling. Specify this to have unpruned weights rescaled after pruning is done.')
     args = parser.parse_args()
 
     base_output_dir = os.path.dirname(__file__)
@@ -282,7 +297,7 @@ if __name__ == '__main__':
     for i in range(args.iterations):
         output_dir = os.path.join(base_output_dir, '{}_{}_{}_{}'.format(args.which_set, args.prune_strategy, args.epochs, i))
         os.makedirs(output_dir, exist_ok=True)
-        losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.epochs, output_dir)
+        losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.dwr, args.epochs, output_dir)
 
         if i == 0:
             # Only add headings once per every two sub-headings to reduce verbosity
@@ -296,10 +311,10 @@ if __name__ == '__main__':
             row.extend([losses[key], accuracies[key]])
         results_df.loc[i] = row
 
-        results_df.to_csv(os.path.join(base_output_dir, '{}_{}_{}_results.csv'.format(args.which_set, args.prune_strategy, args.epochs)))
+        results_df.to_csv(os.path.join(base_output_dir, '{}_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy, '_dwr' if args.dwr else '', args.epochs)))
         print(results_df)
 
     mean = results_df.mean(axis=0)
     results_df.loc['average'] = mean
-    results_df.to_csv(os.path.join(base_output_dir, '{}_{}_{}_results.csv'.format(args.which_set, args.prune_strategy, args.epochs)))
+    results_df.to_csv(os.path.join(base_output_dir, '{}_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy, '_dwr' if args.dwr else '', args.epochs)))
     print(results_df)
