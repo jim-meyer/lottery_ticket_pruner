@@ -192,6 +192,7 @@ def evaluate(which_set, prune_strategy, epochs, output_dir):
     trained_weights = model.get_weights()
     losses[experiment], accuracies[experiment] = mnist.evaluate(model)
     epoch_logs = mnist.get_epoch_logs()
+    pruner.set_pretrained_weights(model)
 
     # Evaluate performance of model with original weights and pruning applied
     num_prune_rounds = 4
