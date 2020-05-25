@@ -427,13 +427,15 @@ if __name__ == '__main__':
         results_df.loc[i] = row
 
         results_df.to_csv(os.path.join(base_output_dir,
-                                       '{}_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy,
-                                                                       '_dwr' if args.dwr else '', args.epochs)))
+                                       '{}_xfer_learn_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy,
+                                                                                  '_dwr' if args.dwr else '',
+                                                                                  args.epochs)))
         print(results_df)
 
     mean = results_df.mean(axis=0)
     results_df.loc['average'] = mean
-    results_df.to_csv(os.path.join(base_output_dir, '{}_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy,
-                                                                                    '_dwr' if args.dwr else '',
-                                                                                    args.epochs)))
+    results_df.to_csv(
+        os.path.join(base_output_dir, '{}_xfer_learn_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy,
+                                                                                 '_dwr' if args.dwr else '',
+                                                                                 args.epochs)))
     print(results_df)
