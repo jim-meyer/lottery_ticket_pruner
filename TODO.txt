@@ -1,5 +1,7 @@
 TO DO
 -----
+See if pruning from transfer learning starting points instead of random weights has benefits
+Set flake8 max line length to 120 and have it enforce. Reformat code accordingly as needed.
 Implement same-sign pruning
 Run mnist, cifar10_reduced_10x 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise

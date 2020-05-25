@@ -44,36 +44,39 @@ class Dataset(object):
     def __init__(self, which_set='mnist'):
         # The MNIST and CIFAR10 datasets each have 10 classes
         self.num_classes = 10
-        # the data, split between train and test sets
-        func_map = {'mnist': self.load_mnist_data, 'cifar10': self.load_cifar10_data,
-                    'cifar10_reduced_10x': self.load_cifar10_reduced_10x_data}
-        if which_set in func_map:
-            (x_train, y_train), (x_test, y_test) = func_map[which_set]()
+        if which_set is not None:
+            # the data, split between train and test sets
+            func_map = {'mnist': self.load_mnist_data, 'cifar10': self.load_cifar10_data,
+                        'cifar10_reduced_10x': self.load_cifar10_reduced_10x_data}
+            if which_set in func_map:
+                (x_train, y_train), (x_test, y_test) = func_map[which_set]()
+            else:
+                raise ValueError('`which_set` must be one of {} but it was {}'.format(func_map.keys(), which_set))
+
+            if K.image_data_format() == 'channels_first':
+                x_train = x_train.reshape(x_train.shape[0], self.channels, self.img_rows, self.img_cols)
+                x_test = x_test.reshape(x_test.shape[0], self.channels, self.img_rows, self.img_cols)
+                self.input_shape = (self.channels, self.img_rows, self.img_cols)
+            else:
+                x_train = x_train.reshape(x_train.shape[0], self.img_rows, self.img_cols, self.channels)
+                x_test = x_test.reshape(x_test.shape[0], self.img_rows, self.img_cols, self.channels)
+                self.input_shape = (self.img_rows, self.img_cols, self.channels)
+
+            x_train = x_train.astype('float32')
+            x_test = x_test.astype('float32')
+            x_train /= 255
+            x_test /= 255
+            print('x_train shape:', x_train.shape)
+            print(x_train.shape[0], 'train samples')
+            print(x_test.shape[0], 'test samples')
+
+            # convert class vectors to binary class matrices
+            y_train = keras.utils.to_categorical(y_train, self.num_classes)
+            y_test = keras.utils.to_categorical(y_test, self.num_classes)
+            self.x_train, self.y_train, self.x_test, self.y_test = x_train, y_train, x_test, y_test
         else:
-            raise ValueError('`which_set` must be one of {} but it was {}'.format(func_map.keys(), which_set))
-
-        if K.image_data_format() == 'channels_first':
-            x_train = x_train.reshape(x_train.shape[0], self.channels, self.img_rows, self.img_cols)
-            x_test = x_test.reshape(x_test.shape[0], self.channels, self.img_rows, self.img_cols)
-            self.input_shape = (self.channels, self.img_rows, self.img_cols)
-        else:
-            x_train = x_train.reshape(x_train.shape[0], self.img_rows, self.img_cols, self.channels)
-            x_test = x_test.reshape(x_test.shape[0], self.img_rows, self.img_cols, self.channels)
-            self.input_shape = (self.img_rows, self.img_cols, self.channels)
-
-        x_train = x_train.astype('float32')
-        x_test = x_test.astype('float32')
-        x_train /= 255
-        x_test /= 255
-        print('x_train shape:', x_train.shape)
-        print(x_train.shape[0], 'train samples')
-        print(x_test.shape[0], 'test samples')
-
-        # convert class vectors to binary class matrices
-        y_train = keras.utils.to_categorical(y_train, self.num_classes)
-        y_test = keras.utils.to_categorical(y_test, self.num_classes)
-
-        self.x_train, self.y_train, self.x_test, self.y_test = x_train, y_train, x_test, y_test
+            self.input_shape = None
+            self.x_train, self.y_train, self.x_test, self.y_test = None, None, None, None
 
     def load_cifar10_data(self):
         """ Initialize the instance for training with the full CIFAR dataset.
@@ -124,6 +127,37 @@ class Dataset(object):
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
         return (x_train, y_train), (x_test, y_test)
 
+    def split_dataset(self):
+        """ Splits this dataset into two datasets. The first dataset (self) has the first N/2 classes and the
+        second dataset (return value) has the remaining N/2 classes.
+        """
+        new_dataset = Dataset(which_set=None)
+        y_train_categorical = np.argmax(self.y_train, axis=1)
+        y_test_categorical = np.argmax(self.y_test, axis=1)
+        new_num_classes = self.num_classes // 2
+
+        new_dataset.num_classes = self.num_classes - new_num_classes
+        self.num_classes = new_num_classes
+        new_dataset.input_shape = self.input_shape
+
+        # Split the training data
+        self_train = y_train_categorical < new_num_classes
+        new_train = y_train_categorical >= new_num_classes
+        new_dataset.x_train = self.x_train[new_train]
+        new_dataset.y_train = self.y_train[new_train, new_num_classes:]
+        self.x_train = self.x_train[self_train]
+        self.y_train = self.y_train[self_train, :new_num_classes]
+
+        # Split the testing data
+        self_test = y_test_categorical < new_num_classes
+        new_test = y_test_categorical >= new_num_classes
+        new_dataset.x_test = self.x_test[new_test]
+        new_dataset.y_test = self.y_test[new_test, new_num_classes:]
+        self.x_test = self.x_test[self_test]
+        self.y_test = self.y_test[self_test, :new_num_classes]
+
+        return new_dataset
+
 
 class MNIST(object):
     """ A class that can be used to create, train and evaluate a model on the MNIST or CIFAR10 datasets.
@@ -154,17 +188,21 @@ class MNIST(object):
                       metrics=['accuracy'])
         return model
 
-    def fit(self, model, epochs):
+    def fit(self, model, epochs, dataset=None):
+        if dataset is None:
+            dataset = self.dataset
         self.logging_callback.reset(self.experiment)
-        model.fit(self.dataset.x_train, self.dataset.y_train,
+        model.fit(dataset.x_train, dataset.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
                   verbose=1,
-                  validation_data=(self.dataset.x_test, self.dataset.y_test),
+                  validation_data=(dataset.x_test, dataset.y_test),
                   callbacks=self.callbacks)
 
-    def evaluate(self, model):
-        loss, accuracy = model.evaluate(self.dataset.x_test, self.dataset.y_test, verbose=0)
+    def evaluate(self, model, dataset=None):
+        if dataset is None:
+            dataset = self.dataset
+        loss, accuracy = model.evaluate(dataset.x_test, dataset.y_test, verbose=0)
         return loss, accuracy
 
     def get_epoch_logs(self):
@@ -198,13 +236,15 @@ class MNISTPruned(MNIST):
         self.pruner = pruner
         self.use_dwr = use_dwr
 
-    def fit(self, model, epochs):
+    def fit(self, model, epochs, dataset=None):
+        if dataset is None:
+            dataset = self.dataset
         callbacks = self.callbacks + [lottery_ticket_pruner.PrunerCallback(self.pruner, use_dwr=self.use_dwr)]
-        model.fit(self.dataset.x_train, self.dataset.y_train,
+        model.fit(dataset.x_train, dataset.y_train,
                   batch_size=self.batch_size,
                   epochs=epochs,
                   verbose=1,
-                  validation_data=(self.dataset.x_test, self.dataset.y_test),
+                  validation_data=(dataset.x_test, dataset.y_test),
                   callbacks=callbacks)
 
 
@@ -250,20 +290,32 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
     losses = {}
     accuracies = {}
 
-    experiment = 'MNIST'
+    experiment = 'MNIST_xfer_learn'
     mnist = MNIST(experiment, which_set=which_set)
+    # Split the dataset into two, the dataset that we'll use to classically train a model, and the dataset we'll
+    # use to apply train a new model using transfer learning and lottery ticket pruning.
+    tl_dataset = mnist.dataset.split_dataset()
     model = mnist.create_model()
+
+    experiment = 'MNIST_xfer_learn_no_training'
+    losses[experiment], accuracies[experiment] = mnist.evaluate(model)
+
+    # Classically train a model on data from half of the classes
+    experiment = 'MNIST_xfer_learn_train_1st_half_data'
+    mnist.fit(model, epochs)
+    losses[experiment], accuracies[experiment] = mnist.evaluate(model)
+    # For this experiment we consider the starting weights to be the initial weights of the trained model on the
+    # first N/2 class' samples. This is the source model that we will use to do transfer learning to train a model on
+    # the remaining data that has "new" class labels.
     starting_weights = model.get_weights()
 
     pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
-    experiment = 'MNIST_no_training'
-    losses[experiment], accuracies[experiment] = mnist.evaluate(model)
-
-    experiment = 'MNIST'
-    mnist.fit(model, epochs)
+    # Now we classically train a model on the other half of the data from the previously unknown classes
+    experiment = 'MNIST_xfer_learn_train_2nd_half_data'
+    mnist.fit(model, epochs, dataset=tl_dataset)
     trained_weights = model.get_weights()
-    losses[experiment], accuracies[experiment] = mnist.evaluate(model)
+    losses[experiment], accuracies[experiment] = mnist.evaluate(model, dataset=tl_dataset)
     epoch_logs = mnist.get_epoch_logs()
     pruner.set_pretrained_weights(model)
 
@@ -282,7 +334,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         model.set_weights(starting_weights)
         pruner.apply_pruning(model)
 
-        experiment = 'MNIST_no_training_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'MNIST_xfer_learn_no_training_pruned@{:.3f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     pruner.reset_masks()
@@ -301,12 +353,14 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         pruner.calc_prune_mask(model, prune_rate, prune_strategy)
 
         # Now create a new model that has the original random starting weights and train it
-        experiment = 'MNIST_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'MNIST_xfer_learn_pruned@{:.3f}'.format(overall_prune_rate)
         mnist_pruned = MNISTPruned(experiment, pruner, use_dwr=use_dwr, which_set=which_set)
+        # Need to split the dataset here so `mnist` and `mnist_pruned` models have same shape
+        _ = mnist_pruned.dataset.split_dataset()
         prune_trained_model = mnist_pruned.create_model()
         prune_trained_model.set_weights(starting_weights)
-        mnist_pruned.fit(prune_trained_model, epochs)
-        losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(prune_trained_model)
+        mnist_pruned.fit(prune_trained_model, epochs, dataset=tl_dataset)
+        losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(prune_trained_model, dataset=tl_dataset)
 
         epoch_logs2 = mnist_pruned.get_epoch_logs()
         assert len(epoch_logs) == epochs
@@ -355,8 +409,8 @@ if __name__ == '__main__':
     base_output_dir = os.path.dirname(__file__)
 
     for i in range(args.iterations):
-        output_dir = os.path.join(base_output_dir, '{}_{}_{}_{}'.format(args.which_set, args.prune_strategy,
-                                                                        args.epochs, i))
+        output_dir = os.path.join(base_output_dir, '{}_xfer_learn_{}_{}_{}'.format(args.which_set, args.prune_strategy,
+                                                                                   args.epochs, i))
         os.makedirs(output_dir, exist_ok=True)
         losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.dwr, args.epochs, output_dir)
 

@@ -40,7 +40,7 @@ A typical use of the code in this repo looks something like this:
     model.fit(X, y, callbacks=[PrunerCallback(pruner)])
     trained_loss, trained_accuracy = model.evaluate(x_test, y_test)
 
-For a full working example that computes the accuracy for an *untrained* model that has been pruned, as well
+For a full working example that computes the accuracy for an untrained model that has been pruned, as well
 as training a model from scratch using lotttery ticket pruning, see the [example code](example/example.py).
 This example code uses the [MNIST](https://keras.io/api/datasets/mnist/) and
 [CIFAR10](https://keras.io/api/datasets/cifar10/) datasets.

@@ -41,11 +41,11 @@ class MNISTTest(MNIST):
         # Make sure the test verification callback gets called last by adding it at end of list
         callbacks = callbacks + [self.test_verification_callback]
         # Only use the first 100, 10 samples for training, validation to speed things up for unit test purposes
-        model.fit(self.x_train[:100], self.y_train[:100],
+        model.fit(self.dataset.x_train[:100], self.dataset.y_train[:100],
                   batch_size=128,
                   epochs=epochs,
                   verbose=1,
-                  validation_data=(self.x_test[:10], self.y_test[:10]),
+                  validation_data=(self.dataset.x_test[:10], self.dataset.y_test[:10]),
                   callbacks=callbacks)
 
 
