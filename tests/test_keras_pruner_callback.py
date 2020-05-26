@@ -56,7 +56,8 @@ class TestKerasPrunerCallback(unittest.TestCase):
         self.pruner = lottery_ticket_pruner.LotteryTicketPruner(self.model)
 
     def _assert_weights_have_been_pruned(self):
-        for tpl, layer, index, original_weights, pretrained_weights, current_weights, current_mask in self.pruner.iterate_prunables(self.model):
+        for tpl, layer, index, original_weights, pretrained_weights, current_weights, current_mask in\
+                self.pruner.iterate_prunables(self.model):
             # Verify weights
             pruned_count = np.sum(current_weights == 0.0)
             self.assertEqual(np.prod(current_weights.shape) * TEST_PRUNE_RATE, pruned_count)

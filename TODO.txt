@@ -1,6 +1,6 @@
 TO DO
 -----
-Set flake8 max line length to 120 and have it enforce. Reformat code accordingly as needed.
+Update example.py from transfer_learning_example.py
 Implement same-sign pruning
 Run mnist, cifar10_reduced_10x 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise
@@ -36,8 +36,9 @@ Implement Dynamic Weight Rescaling
 Document the example better
 Review what all I should leave copyright in and what I shouldn't.
 Also check to see if including MIT license in the files is a good idea.
-ANSWER: A single LICENSE file at root is sufficient.
+    ANSWER: A single LICENSE file at root is sufficient.
 Train using patience setting for paper? Or arbitrary # of epochs?
-ANSWER: Added support for patience callback. Using patience=3 in examples.
+    ANSWER: Added support for patience callback. Using patience=3 in examples.
 See if pruning from transfer learning starting points instead of random weights has benefits
-ANSWER: Yes, it definitely applies to transfer learning too.
+    ANSWER: Yes, it definitely applies to transfer learning too.
+Set flake8 max line length to 120 and have it enforce. Reformat code accordingly as needed.

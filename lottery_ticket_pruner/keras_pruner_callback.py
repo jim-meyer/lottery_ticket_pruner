@@ -16,8 +16,8 @@ class PrunerCallback(keras.callbacks.Callback):
             the model after every epoch.
             See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.
             A quote from that paper describes it best:
-                "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the total
-                number of weights in the layer over the number of ones in the corresponding mask."
+                "For each training iteration and for each layer, we multiply the underlying weights by the ratio of the
+                total number of weights in the layer over the number of ones in the corresponding mask."
         """
         super().__init__()
         self.pruner = pruner
@@ -27,7 +27,7 @@ class PrunerCallback(keras.callbacks.Callback):
         super().on_train_end(logs)
         # Prune weights after training is completed so inference uses pruned weights
         self.pruner.apply_pruning(self.model)
-        # We don't apply DWR at the end of training since it changes the weights that we just trained so hard to arrive at
+        # Don't apply DWR at the end of training since it changes the weights that we just trained so hard to arrive at
 
     def on_epoch_begin(self, epoch, logs=None):
         super().on_epoch_begin(epoch, logs)

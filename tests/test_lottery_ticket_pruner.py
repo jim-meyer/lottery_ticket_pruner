@@ -101,35 +101,43 @@ class TestLotteryTicketStateManager(unittest.TestCase):
     # _prune_func_smallest_weights()
     #
     def test_prune_func_smallest_weights(self):
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 2, 3, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.25)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 2, 3, 4], dtype=float),
+                                                   np.array([1, 1, 1, 1]), prune_percentage=0.25)
         self.assertTrue(np.array_equal([0, 1, 1, 1], actual_mask))
 
         # Just changed order of weights
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([3, 1, 2, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([3, 1, 2, 4], dtype=float),
+                                                   np.array([1, 1, 1, 1]), prune_percentage=0.5)
         self.assertTrue(np.array_equal([1, 0, 0, 1], actual_mask))
 
         # Odd number of weights
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([5, 3, 1, 2, 4], dtype=float), np.array([1, 1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([5, 3, 1, 2, 4], dtype=float),
+                                                   np.array([1, 1, 1, 1, 1]), prune_percentage=0.5)
         self.assertTrue(np.array_equal([1, 1, 0, 0, 1], actual_mask))
 
         # Current mask masks out one of the lowest weights
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 2, 3, 4, 5], dtype=float), np.array([0, 1, 1, 1, 1]), prune_percentage=0.25)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 2, 3, 4, 5], dtype=float),
+                                                   np.array([0, 1, 1, 1, 1]), prune_percentage=0.25)
         self.assertTrue(np.array_equal([0, 0, 1, 1, 1], actual_mask))
 
         # Current mask masks out one of the lowest weights
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 2, 3, 4], dtype=float), np.array([0, 1, 1, 0]), prune_percentage=0.25)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 2, 3, 4], dtype=float),
+                                                   np.array([0, 1, 1, 0]), prune_percentage=0.25)
         self.assertTrue(np.array_equal([0, 0, 1, 0], actual_mask))
 
         # Some negative and some positive weights should be masked
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([-1, 2, -3, 4], dtype=float), np.array([1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([-1, 2, -3, 4], dtype=float),
+                                                   np.array([1, 1, 1, 1]), prune_percentage=0.5)
         self.assertTrue(np.array_equal([0, 0, 1, 1], actual_mask))
 
         # Many identical values but only some of them should get masked
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 1, 1, 1, 2, 2], dtype=float), np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, 1, 1, 1, 2, 2], dtype=float),
+                                                   np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
         self.assertEqual(3, np.sum(actual_mask))
 
         # Many identical absolute values but only some of them should get masked
-        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, -1, -1, 1, 2, -2], dtype=float), np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
+        actual_mask = _prune_func_smallest_weights(np.array([]), None, np.array([1, -1, -1, 1, 2, -2], dtype=float),
+                                                   np.array([1, 1, 1, 1, 1, 1]), prune_percentage=0.5)
         self.assertEqual(3, np.sum(actual_mask))
 
     #
@@ -147,12 +155,14 @@ class TestLotteryTicketStateManager(unittest.TestCase):
 
         # Prune percentage is zero
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(model), None, prune_percentage=0.0, prune_count=None)
+            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(model), None, prune_percentage=0.0,
+                                                    prune_count=None)
             self.assertEqual(1, warning.call_count)
 
         # Prune count is zero
         with unittest.mock.patch('logging.Logger.warning') as warning:
-            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(model), None, prune_percentage=None, prune_count=0)
+            _ = _prune_func_smallest_weights_global(pruner.iterate_prunables(model), None, prune_percentage=None,
+                                                    prune_count=0)
             self.assertEqual(1, warning.call_count)
 
     #
@@ -228,7 +238,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         weights = interesting_layer.get_weights()
         interesting_weights = weights[interesting_weights_index]
         num_interesting_layer_weights = np.prod(interesting_weights.shape)
-        test_weights = np.array(np.random.choice(range(num_interesting_layer_weights), size=num_interesting_layer_weights, replace=False))
+        test_weights = np.array(np.random.choice(range(num_interesting_layer_weights),
+                                                 size=num_interesting_layer_weights, replace=False))
         test_weights = test_weights.reshape(interesting_weights.shape)
         weights[interesting_weights_index] = test_weights
         interesting_layer.set_weights(weights)
@@ -257,10 +268,13 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         # Mask out any pruned weights
         pruned_weights = interesting_layer.get_weights()[interesting_weights_index]
         expected_test_weights = test_weights * pruner.prune_masks_map[tpl][interesting_weights_index]
-        # We expect DWR to have increased the value of unmasked weight by a factor of 2.5 (1.0 / ((1.0 - 0.5) * 0.2) = 2.5)
-        # But since there is rounding due to counting the number of 1s in the prune mask (an int) the rescaling factor is not quite exactly 2.5
+        # We expect DWR to have increased the value of unmasked weight by a factor of 2.5
+        # (1.0 / ((1.0 - 0.5) * 0.2) = 2.5)
+        # But since there is rounding due to counting the number of 1s in the prune mask (an int) the rescaling factor
+        # is not quite exactly 2.5
         num_first_prune_ones = int(num_interesting_layer_weights * prune_rate1)
-        rescale_factor = num_interesting_layer_weights / (num_interesting_layer_weights - (num_first_prune_ones + int(num_first_prune_ones * prune_rate2)))
+        denominator = (num_interesting_layer_weights - (num_first_prune_ones + int(num_first_prune_ones * prune_rate2)))
+        rescale_factor = num_interesting_layer_weights / denominator
         expected_test_weights *= rescale_factor
         np.testing.assert_array_almost_equal(expected_test_weights, pruned_weights, decimal=3)
 
@@ -278,7 +292,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         interesting_layer_weight_count = int(np.prod(interesting_layer_shape))
         interesting_key = tuple([interesting_layer_index, tuple([0])])
 
-        dl_test_weights = np.random.choice(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, size=TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, replace=False)
+        dl_test_weights = np.random.choice(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES,
+                                           size=TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, replace=False)
         # Get rid of zero weights since we count those below during verification
         dl_test_weights += 1
         dl_test_weights = dl_test_weights.reshape(interesting_layer_shape)
@@ -312,7 +327,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         interesting_layer = model.layers[1]
         interesting_layer_shape = interesting_layer.weights[0].shape
 
-        dl_test_weights = np.random.choice(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, size=TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, replace=False)
+        dl_test_weights = np.random.choice(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES,
+                                           size=TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES, replace=False)
         # Make some weights negative
         dl_test_weights -= TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES // 2
         dl_test_weights = dl_test_weights.reshape(interesting_layer_shape)
@@ -328,9 +344,11 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         unpruned_pos = np.sum(actual_weights[0] >= min_expected_pos)
         unpruned_neg = np.sum(actual_weights[0] <= max_expected_neg)
         unpruned = unpruned_pos + unpruned_neg
-        self.assertIn(unpruned, [int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate), int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate) - 1])
+        self.assertIn(unpruned, [int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate),
+                                 int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate) - 1])
         expected_to_be_pruned = TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES - unpruned - 1
-        self.assertLessEqual(abs(int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate) - expected_to_be_pruned), 1)
+        self.assertLessEqual(abs(int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate) - expected_to_be_pruned),
+                             1)
 
         # Prune again
         prune_rate2 = 0.1
@@ -467,7 +485,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         weights = interesting_layer.get_weights()
         interesting_weights = weights[interesting_weights_index]
         num_interesting_layer_weights = np.prod(interesting_weights.shape)
-        new_weights = np.array(np.random.choice(range(num_interesting_layer_weights), size=num_interesting_layer_weights, replace=False))
+        new_weights = np.array(np.random.choice(range(num_interesting_layer_weights),
+                                                size=num_interesting_layer_weights, replace=False))
         rand_multiplier = np.random.choice([1, -1], size=num_interesting_layer_weights, replace=True)
         new_weights *= rand_multiplier
         new_weights = new_weights.reshape(interesting_weights.shape)
@@ -476,7 +495,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
 
         pruner.set_pretrained_weights(model)
 
-        # Now verify that the absolute value of all unpruned weights are as large or larger than the smallest expected non-zero weight
+        # Now verify that the absolute value of all unpruned weights are as large or larger than the smallest expected
+        # non-zero weight
         prune_rate = 0.2
         pruner.calc_prune_mask(model, prune_rate, 'large_final')
         pruner.apply_pruning(model)
@@ -527,7 +547,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
 
         pruner.set_pretrained_weights(model)
 
-        # Now verify that the absolute value of all unpruned weights are as large or larger than the smallest expected non-zero weight
+        # Now verify that the absolute value of all unpruned weights are as large or larger than the smallest expected
+        # non-zero weight
         prune_rate = 0.2
         pruner.calc_prune_mask(model, prune_rate, 'large_final')
         pruner.apply_pruning(model)
@@ -559,7 +580,8 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         # Don't call this since not calling this is the purpose of this test
         # pruner.set_pretrained_weights(model)
 
-        # Now verify that the absolute value of all unpruned weights are as large or larger than the smallest expected non-zero weight
+        # Now verify that the absolute value of all unpruned weights are as large or larger than the smallest expected
+        # non-zero weight
         with self.assertRaises(ValueError) as ex:
             pruner.calc_prune_mask(model, 0.2, 'large_final')
         self.assertIn('large_final', str(ex.exception))
