@@ -5,6 +5,7 @@ This same can be readily adapted for other models including DNNs.
 import argparse
 import collections
 import json
+import math
 import os
 
 import keras
@@ -168,7 +169,7 @@ class MNIST(object):
 
         self.experiment = experiment
         self.logging_callback = LoggingCheckpoint(experiment)
-        self.callbacks = [self.logging_callback]
+        self.callbacks = [self.logging_callback, keras.callbacks.EarlyStopping(patience=3, verbose=1)]
 
     def create_model(self):
         model = Sequential()
@@ -248,6 +249,18 @@ class MNISTPruned(MNIST):
                   callbacks=callbacks)
 
 
+def _merge_epoch_logs(epoch_logs, epoch_logs2):
+    """ Due to using early stopping it's possible that training some models takes more epochs than others.
+    So we need to merge the epoch logs (training x validation, loss x accuracy) from across all the epochs.
+    """
+    for epoch, logs_dict in epoch_logs2.items():
+        if epoch not in epoch_logs:
+            epoch_logs[epoch] = logs_dict
+        else:
+            epoch_logs[epoch].update(logs_dict)
+    return epoch_logs
+
+
 def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
     """ Evaluates multiple training approaches:
             A model with randomly initialized weights evaluated with no training having been done
@@ -290,18 +303,18 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
     losses = {}
     accuracies = {}
 
-    experiment = 'MNIST_xfer_learn'
+    experiment = 'xfer_learn'
     mnist = MNIST(experiment, which_set=which_set)
     # Split the dataset into two, the dataset that we'll use to classically train a model, and the dataset we'll
     # use to apply train a new model using transfer learning and lottery ticket pruning.
     tl_dataset = mnist.dataset.split_dataset()
     model = mnist.create_model()
 
-    experiment = 'MNIST_xfer_learn_no_training'
+    experiment = 'xfer_learn_no_training'
     losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     # Classically train a model on data from half of the classes
-    experiment = 'MNIST_xfer_learn_train_1st_half_data'
+    experiment = 'xfer_learn_train_1st_half_data'
     mnist.fit(model, epochs)
     losses[experiment], accuracies[experiment] = mnist.evaluate(model)
     # For this experiment we consider the starting weights to be the initial weights of the trained model on the
@@ -312,7 +325,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
     pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
     # Now we classically train a model on the other half of the data from the previously unknown classes
-    experiment = 'MNIST_xfer_learn_train_2nd_half_data'
+    experiment = 'xfer_learn_train_2nd_half_data'
     mnist.fit(model, epochs, dataset=tl_dataset)
     trained_weights = model.get_weights()
     losses[experiment], accuracies[experiment] = mnist.evaluate(model, dataset=tl_dataset)
@@ -334,7 +347,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         model.set_weights(starting_weights)
         pruner.apply_pruning(model)
 
-        experiment = 'MNIST_xfer_learn_no_training_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'xfer_learn_no_training_pruned@{:.3f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     pruner.reset_masks()
@@ -353,7 +366,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         pruner.calc_prune_mask(model, prune_rate, prune_strategy)
 
         # Now create a new model that has the original random starting weights and train it
-        experiment = 'MNIST_xfer_learn_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'xfer_learn_pruned@{:.3f}'.format(overall_prune_rate)
         mnist_pruned = MNISTPruned(experiment, pruner, use_dwr=use_dwr, which_set=which_set)
         # Need to split the dataset here so `mnist` and `mnist_pruned` models have same shape
         _ = mnist_pruned.dataset.split_dataset()
@@ -362,10 +375,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         mnist_pruned.fit(prune_trained_model, epochs, dataset=tl_dataset)
         losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(prune_trained_model, dataset=tl_dataset)
 
-        epoch_logs2 = mnist_pruned.get_epoch_logs()
-        assert len(epoch_logs) == epochs
-        for epoch in range(epochs):
-            epoch_logs[epoch].update(epoch_logs2[epoch])
+        epoch_logs = _merge_epoch_logs(epoch_logs, mnist_pruned.get_epoch_logs())
 
         # Periodically save the results to allow inspection during these multiple lengthy iterations
         with open(os.path.join(output_dir, 'epoch_logs.json'), 'w') as f:
@@ -377,12 +387,16 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         headings.extend([experiment, '', '', ''])
     sub_headings = ['train_loss', 'train_acc', 'val_loss', 'val_acc'] * len(epoch_logs[0])
     epoch_logs_df = pd.DataFrame([], columns=[headings, sub_headings])
-    assert len(epoch_logs) == epochs
-    for epoch in range(epochs):
+    all_keys = set(epoch_logs[0].keys())
+    for epoch, epoch_results in epoch_logs.items():
         row = []
-        for experiment in epoch_logs[epoch].keys():
-            exp_dict = epoch_logs[epoch][experiment]
-            row.extend([exp_dict['loss'], exp_dict['acc'], exp_dict['val_loss'], exp_dict['val_acc']])
+        for experiment in all_keys:
+            if experiment in epoch_results:
+                exp_dict = epoch_logs[epoch][experiment]
+                row.extend([exp_dict['loss'], exp_dict['acc'], exp_dict['val_loss'], exp_dict['val_acc']])
+            else:
+                row.extend([math.nan, math.nan, math.nan, math.nan])
+
         epoch_logs_df.loc[epoch] = row
     epoch_logs_df.to_csv(os.path.join(output_dir, 'epoch_logs.csv'))
 

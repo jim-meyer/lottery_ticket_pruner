@@ -134,7 +134,7 @@ class MNIST(object):
 
         self.experiment = experiment
         self.logging_callback = LoggingCheckpoint(experiment)
-        self.callbacks = [self.logging_callback]
+        self.callbacks = [self.logging_callback, keras.callbacks.EarlyStopping(patience=3, verbose=1)]
 
     def create_model(self):
         model = Sequential()
@@ -257,7 +257,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
 
     pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
 
-    experiment = 'MNIST_no_training'
+    experiment = 'no_training'
     losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     experiment = 'MNIST'
@@ -282,7 +282,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         model.set_weights(starting_weights)
         pruner.apply_pruning(model)
 
-        experiment = 'MNIST_no_training_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'no_training_pruned@{:.3f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     pruner.reset_masks()
@@ -301,7 +301,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         pruner.calc_prune_mask(model, prune_rate, prune_strategy)
 
         # Now create a new model that has the original random starting weights and train it
-        experiment = 'MNIST_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'pruned@{:.3f}'.format(overall_prune_rate)
         mnist_pruned = MNISTPruned(experiment, pruner, use_dwr=use_dwr, which_set=which_set)
         prune_trained_model = mnist_pruned.create_model()
         prune_trained_model.set_weights(starting_weights)

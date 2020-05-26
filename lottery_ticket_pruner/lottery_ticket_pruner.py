@@ -371,8 +371,6 @@ class LotteryTicketPruner(object):
                 prunable layers, `prune_percentage` weights will be pruned.
             'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
                 This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
-            'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
-                This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
             'large_final_same_sign': TODO - "same sign" logic needs to be applied once to the model prior to training, not during pruning.
         """
         if not (0.0 < prune_percentage < 1.0):
