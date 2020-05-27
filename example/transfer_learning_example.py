@@ -421,8 +421,10 @@ if __name__ == '__main__':
     base_output_dir = os.path.dirname(__file__)
 
     for i in range(args.iterations):
-        output_dir = os.path.join(base_output_dir, '{}_xfer_learn_{}_{}_{}'.format(args.which_set, args.prune_strategy,
-                                                                                   args.epochs, i))
+        output_dir = os.path.join(base_output_dir, '{}_xfer_learn_{}{}_{}_{}'.format(args.which_set,
+                                                                                     args.prune_strategy,
+                                                                                     '_dwr' if args.dwr else '',
+                                                                                     args.epochs, i))
         os.makedirs(output_dir, exist_ok=True)
         losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.dwr, args.epochs, output_dir)
 
@@ -439,7 +441,8 @@ if __name__ == '__main__':
         results_df.loc[i] = row
 
         results_df.to_csv(os.path.join(base_output_dir,
-                                       '{}_xfer_learn_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy,
+                                       '{}_xfer_learn_{}{}_{}_results.csv'.format(args.which_set,
+                                                                                  args.prune_strategy,
                                                                                   '_dwr' if args.dwr else '',
                                                                                   args.epochs)))
         print(results_df)
@@ -447,7 +450,8 @@ if __name__ == '__main__':
     mean = results_df.mean(axis=0)
     results_df.loc['average'] = mean
     results_df.to_csv(
-        os.path.join(base_output_dir, '{}_xfer_learn_{}{}_{}_results.csv'.format(args.which_set, args.prune_strategy,
+        os.path.join(base_output_dir, '{}_xfer_learn_{}{}_{}_results.csv'.format(args.which_set,
+                                                                                 args.prune_strategy,
                                                                                  '_dwr' if args.dwr else '',
                                                                                  args.epochs)))
     print(results_df)
