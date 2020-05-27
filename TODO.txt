@@ -1,15 +1,14 @@
 TO DO
 -----
-Update example.py from transfer_learning_example.py
-Implement same-sign pruning
-Run mnist, cifar10_reduced_10x 5x and average results
+Run mnist, cifar10 5x and average results
 Implement inside my training pipeline to see if pruning results for DNNs show promise
 Address all outstanding TODOs
 Make sure things work with TF2
 Finish README
-Use github to build upon pushes?
 Post package to pypi
     https://packaging.python.org/guides/using-testpypi/
+Use github to build upon pushes?
+Implement same-sign pruning
 
 
 DONE
@@ -42,3 +41,4 @@ Train using patience setting for paper? Or arbitrary # of epochs?
 See if pruning from transfer learning starting points instead of random weights has benefits
     ANSWER: Yes, it definitely applies to transfer learning too.
 Set flake8 max line length to 120 and have it enforce. Reformat code accordingly as needed.
+Update example.py from transfer_learning_example.py

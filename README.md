@@ -1,14 +1,17 @@
 # Lottery Ticket Pruner
 
 Deep Neural Networks (DNNs) can often benefit from "pruning" some weights in the network, turning dense matrices of weights
-into sparse matrices of weights with little or no loss in accuracy of the overall model. *In fact, these pruned networks
-often times result in better model accuracy!*
+into sparse matrices of weights with little or no loss in accuracy of the overall model.
 
-This is a keras implementation of the pruning strategies outlined in two papers:
+This is a keras implementation of the most relevant pruning strategies outlined in two papers:
 
 - [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](https://arxiv.org/pdf/1803.03635.pdf)
 - [Deconstructing Lottery Tickets: Zeros, Signs, and the Supermask](https://eng.uber.com/deconstructing-lottery-tickets/)
 
+The pruning strategies implemented in this package can reduce the number of non-zero weights of CNNs, DNNs
+by 40-98% with negligible losses in accuracy of the final model.
+Various techniques like [MorphNet](https://ai.googleblog.com/2019/04/morphnet-towards-faster-and-smaller.html) can then
+be applied to further optimize these now sparse models to decrease model size and/or inference times.
 
 # Installation
 
@@ -45,7 +48,9 @@ as training a model from scratch using lotttery ticket pruning, see the [example
 This example code uses the [MNIST](https://keras.io/api/datasets/mnist/) and
 [CIFAR10](https://keras.io/api/datasets/cifar10/) datasets.
 
-# Building
+# Working In This Repo
+
+## Building the python package
 
 See https://packaging.python.org/tutorials/packaging-projects/
 
@@ -53,11 +58,19 @@ See https://packaging.python.org/tutorials/packaging-projects/
     python setup.py sdist bdist_wheel
     TODO - etc etc etc
 
-# Testing
+## Testing
 
 Running unit tests is done via [tox](https://pypi.org/project/tox/). This automatically generates a code coverage report too.
 
     tox
+
+# FAQ
+
+Q: The two papers cited above refer to more pruning strategies than are implemented here. When will you support the
+XXX pruning strategy?
+
+A: The goal of this repo is to provide an implementation of the more effective strategies described
+by the two papers. If other effective strategies are developed then pull requests implementing those strategies  are welcomed.
 
 # Contributing
 

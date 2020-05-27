@@ -5,6 +5,7 @@ This same can be readily adapted for other models including DNNs.
 import argparse
 import collections
 import json
+import math
 import os
 
 import keras
@@ -208,6 +209,18 @@ class MNISTPruned(MNIST):
                   callbacks=callbacks)
 
 
+def _merge_epoch_logs(epoch_logs, epoch_logs2):
+    """ Due to using early stopping it's possible that training some models takes more epochs than others.
+    So we need to merge the epoch logs (training x validation, loss x accuracy) from across all the epochs.
+    """
+    for epoch, logs_dict in epoch_logs2.items():
+        if epoch not in epoch_logs:
+            epoch_logs[epoch] = logs_dict
+        else:
+            epoch_logs[epoch].update(logs_dict)
+    return epoch_logs
+
+
 def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
     """ Evaluates multiple training approaches:
             A model with randomly initialized weights evaluated with no training having been done
@@ -234,8 +247,6 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
                     This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
                 'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
                     This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
-                'large_final_same_sign': TODO - "same sign" logic needs to be applied once to the model prior to
-                    training, not during pruning.
         :param boolean use_dwr: Whether or not to apply Dynamic Weight Rescaling (DWR) to the unpruned weights in the
             model.
             See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.
@@ -308,10 +319,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         mnist_pruned.fit(prune_trained_model, epochs)
         losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(prune_trained_model)
 
-        epoch_logs2 = mnist_pruned.get_epoch_logs()
-        assert len(epoch_logs) == epochs
-        for epoch in range(epochs):
-            epoch_logs[epoch].update(epoch_logs2[epoch])
+        epoch_logs = _merge_epoch_logs(epoch_logs, mnist_pruned.get_epoch_logs())
 
         # Periodically save the results to allow inspection during these multiple lengthy iterations
         with open(os.path.join(output_dir, 'epoch_logs.json'), 'w') as f:
@@ -323,12 +331,16 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         headings.extend([experiment, '', '', ''])
     sub_headings = ['train_loss', 'train_acc', 'val_loss', 'val_acc'] * len(epoch_logs[0])
     epoch_logs_df = pd.DataFrame([], columns=[headings, sub_headings])
-    assert len(epoch_logs) == epochs
-    for epoch in range(epochs):
+    all_keys = set(epoch_logs[0].keys())
+    for epoch, epoch_results in epoch_logs.items():
         row = []
-        for experiment in epoch_logs[epoch].keys():
-            exp_dict = epoch_logs[epoch][experiment]
-            row.extend([exp_dict['loss'], exp_dict['acc'], exp_dict['val_loss'], exp_dict['val_acc']])
+        for experiment in all_keys:
+            if experiment in epoch_results:
+                exp_dict = epoch_logs[epoch][experiment]
+                row.extend([exp_dict['loss'], exp_dict['acc'], exp_dict['val_loss'], exp_dict['val_acc']])
+            else:
+                row.extend([math.nan, math.nan, math.nan, math.nan])
+
         epoch_logs_df.loc[epoch] = row
     epoch_logs_df.to_csv(os.path.join(output_dir, 'epoch_logs.csv'))
 

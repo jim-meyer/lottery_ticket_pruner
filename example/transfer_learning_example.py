@@ -287,8 +287,6 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
                     This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
                 'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
                     This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
-                'large_final_same_sign': TODO - "same sign" logic needs to be applied once to the model prior to
-                    training, not during pruning.
         :param boolean use_dwr: Whether or not to apply Dynamic Weight Rescaling (DWR) to the unpruned weights in the
             model.
             See section 5.2, "Dynamic Weight Rescaling" of https://arxiv.org/pdf/1905.01067.pdf.

@@ -372,11 +372,10 @@ class LotteryTicketPruner(object):
             current_weights = layer.get_weights()
             for index in indices:
                 mask = self.prune_masks_map[tpl][index]
-                if mask is not None:    # TODO - why would mask ever be none here?
-                    initial_weights = self._initial_weights_map[tpl][index]
-                    pretrained_weights = self._pretrained_weights[tpl][
-                        index] if self._pretrained_weights is not None else None
-                    yield tpl, layer, index, initial_weights, pretrained_weights, current_weights[index], mask
+                initial_weights = self._initial_weights_map[tpl][index]
+                pretrained_weights = self._pretrained_weights[tpl][
+                    index] if self._pretrained_weights is not None else None
+                yield tpl, layer, index, initial_weights, pretrained_weights, current_weights[index], mask
 
     def calc_prune_mask(self, model, prune_percentage, prune_strategy):
         """ Prunes the specified percentage of the remaining unpruned weights from the model.
@@ -397,8 +396,6 @@ class LotteryTicketPruner(object):
                 prunable layers, `prune_percentage` weights will be pruned.
             'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
                 This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
-            'large_final_same_sign': TODO - "same sign" logic needs to be applied once to the model prior to training,
-                not during pruning.
         """
         if not (0.0 < prune_percentage < 1.0):
             raise ValueError(
