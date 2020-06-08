@@ -293,7 +293,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         model.set_weights(starting_weights)
         pruner.apply_pruning(model)
 
-        experiment = 'no_training_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'no_training_pruned@{:.4f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     pruner.reset_masks()
@@ -312,7 +312,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         pruner.calc_prune_mask(model, prune_rate, prune_strategy)
 
         # Now create a new model that has the original random starting weights and train it
-        experiment = 'pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'pruned@{:.4f}'.format(overall_prune_rate)
         mnist_pruned = MNISTPruned(experiment, pruner, use_dwr=use_dwr, which_set=which_set)
         prune_trained_model = mnist_pruned.create_model()
         prune_trained_model.set_weights(starting_weights)

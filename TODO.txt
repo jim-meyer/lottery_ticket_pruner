@@ -1,14 +1,11 @@
 TO DO
 -----
-Run mnist, cifar10 5x and average results
-    Run same as above with DWR
-Implement inside my training pipeline to see if pruning results for DNNs show promise
-Address all outstanding TODOs
 Make sure things work with TF2
 Finish README
-Post package to pypi
-    https://packaging.python.org/guides/using-testpypi/
 Use github to build upon pushes?
+Post package to pypi
+    Keyword: Keras, pruned, CNN pruning, DNN pruning, lottery ticket pruning
+    https://packaging.python.org/guides/using-testpypi/
 Implement same-sign pruning
 
 
@@ -43,3 +40,5 @@ See if pruning from transfer learning starting points instead of random weights 
     ANSWER: Yes, it definitely applies to transfer learning too.
 Set flake8 max line length to 120 and have it enforce. Reformat code accordingly as needed.
 Update example.py from transfer_learning_example.py
+Address all outstanding TODOs
+Implement inside my training pipeline to see if pruning results for DNNs show promise

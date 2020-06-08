@@ -48,7 +48,50 @@ as training a model from scratch using lotttery ticket pruning, see the [example
 This example code uses the [MNIST](https://keras.io/api/datasets/mnist/) and
 [CIFAR10](https://keras.io/api/datasets/cifar10/) datasets.
 
+# Results
+
+To see the effects of pruning at 20%, 44.72%, 81.18%, 98.78%, 99.98% using the 3 supported pruning strategies across the
+MNIST and CIFAR10 datasets, with and without Dynamic Weight Resizing (DWR) were obtained via:
+
+To see the effects of pruning at 20%, 55.8%, 89.6%, 99.3% using the 3 supported pruning strategies across the
+MNIST and CIFAR10 datasets, with and without Dynamic Weight Resizing (DWR) were obtained via:
+
+    python example/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights
+    python example/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights_global
+
+    python example/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights --dwr
+    python example/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights_global --dwr
+
+    python example/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights
+    python example/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights_global
+
+    python example/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights --dwr
+    python example/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights_global --dwr
+
+The results of averaging across 5 iterations, removing the min and max results were as follows:
+
+TODO - add results here
+
+    |Prune Percentage|  |Dataset|   |Prune Strategy|            |DWR?|      |Avg Accuracy|  |Avg Epochs|
+    |:---|              |:---|      |:---:|                     |:---:|     |:---:|         |:---:|
+    |20%|               |mnist|     |smallest_weights|          |False|     ||              ||
+    |20%|               |mnist|     |smallest_weights_global|   |False|     ||              ||
+    |20%|               |cifar10|   |smallest_weights|          |False|     ||              ||
+    |20%|               |cifar10|   |smallest_weights_global|   |False|     ||              ||
+
+Using Dynamic Weight Reduction:
+
+    |Prune Percentage|  |Dataset|   |Prune Strategy|            |DWR?|      |Avg Accuracy|  |Avg Epochs|
+    |:---|              |:---|      |:---:|                     |:---:|     |:---:|         |:---:|
+    |20%|               |mnist|     |smallest_weights|          |True|      ||              || 
+    |20%|               |mnist|     |smallest_weights_global|   |True|      ||              ||
+    |20%|               |cifar10|   |smallest_weights|          |True|      ||              || 
+    |20%|               |cifar10|   |smallest_weights_global|   |True|      ||              ||
+
+
 # Working In This Repo
+
+The information in this section is only needed if you need to modify this package.
 
 ## Building the python package
 
@@ -70,7 +113,7 @@ Q: The two papers cited above refer to more pruning strategies than are implemen
 XXX pruning strategy?
 
 A: The goal of this repo is to provide an implementation of the more effective strategies described
-by the two papers. If other effective strategies are developed then pull requests implementing those strategies  are welcomed.
+by the two papers. If other effective strategies are developed then pull requests implementing those strategies are welcomed.
 
 # Contributing
 

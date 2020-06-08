@@ -1,6 +1,5 @@
 """
-An example of how to evaluate a classically trained CNN and a CNN trained using Lottery Ticket pruning.
-This same can be readily adapted for other models including DNNs.
+An example of how to use Lottery Ticket Pruning when using transfer learning.
 """
 import argparse
 import collections
@@ -345,7 +344,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         model.set_weights(starting_weights)
         pruner.apply_pruning(model)
 
-        experiment = 'xfer_learn_no_training_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'xfer_learn_no_training_pruned@{:.4f}'.format(overall_prune_rate)
         losses[experiment], accuracies[experiment] = mnist.evaluate(model)
 
     pruner.reset_masks()
@@ -364,7 +363,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         pruner.calc_prune_mask(model, prune_rate, prune_strategy)
 
         # Now create a new model that has the original random starting weights and train it
-        experiment = 'xfer_learn_pruned@{:.3f}'.format(overall_prune_rate)
+        experiment = 'xfer_learn_pruned@{:.4f}'.format(overall_prune_rate)
         mnist_pruned = MNISTPruned(experiment, pruner, use_dwr=use_dwr, which_set=which_set)
         # Need to split the dataset here so `mnist` and `mnist_pruned` models have same shape
         _ = mnist_pruned.dataset.split_dataset()
