@@ -180,13 +180,16 @@ class TestLotteryTicketStateManager(unittest.TestCase):
     #
     def test_constructor(self):
         model1 = self._create_test_model()
-
-        # Different number of layers
-        model2 = self._create_test_mode_extra_layer()
         pruner = lottery_ticket_pruner.LotteryTicketPruner(model1)
-        with self.assertRaises(ValueError) as ex:
-            pruner.calc_prune_mask(model2, 0.2, 'smallest_weights')
-        self.assertIn('must have the same number of layers', str(ex.exception))
+
+        # Disabled since there are legit cases where the two models may different. E.g when using transfer learning
+        # one may choose to replace, say, a single head layer in the original model with 2 or more layers in the new
+        # model.
+        # # Different number of layers
+        # model2 = self._create_test_mode_extra_layer()
+        # with self.assertRaises(ValueError) as ex:
+        #     pruner.calc_prune_mask(model2, 0.2, 'smallest_weights')
+        # self.assertIn('must have the same number of layers', str(ex.exception))
 
         # Different shapes
         model2 = self._create_test_model_diff_shape(diff_input_shape=True)

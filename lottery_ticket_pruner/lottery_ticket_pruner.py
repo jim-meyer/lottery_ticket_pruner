@@ -262,9 +262,12 @@ class LotteryTicketPruner(object):
         self.cumulative_pruning_rate = 0.0
 
     def _verify_compatible_model(self, model):
-        if len(model.layers) != len(self.layer_input_shapes):
-            raise ValueError('`model` must have the same number of layers as the initial model used to create this '
-                             'instance ({} vs {}'.format(len(model.layers), len(self.layer_input_shapes)))
+        # Disabled since there are legit cases where the two models may different. E.g when using transfer learning
+        # one may choose to replace, say, a single head layer in the original model with 2 or more layers in the new
+        # model.
+        # if len(model.layers) != len(self.layer_input_shapes):
+        #     raise ValueError('`model` must have the same number of layers as the initial model used to create this '
+        #                      'instance ({} vs {}'.format(len(model.layers), len(self.layer_input_shapes)))
         for layer, input_shape, output_shape in zip(model.layers, self.layer_input_shapes, self.layer_output_shapes):
             if getattr(layer, 'input_shape', None) != input_shape:
                 raise ValueError('All layers in `model` and `initial_model` must have the same input shape for layer '
