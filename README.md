@@ -95,11 +95,15 @@ The information in this section is only needed if you need to modify this packag
 
 ## Building the python package
 
-See https://packaging.python.org/tutorials/packaging-projects/
+Steps from https://packaging.python.org/tutorials/packaging-projects/:
 
     pip install -r requirements.txt
     python setup.py sdist bdist_wheel
-    TODO - etc etc etc
+    twine upload --repository testpypi dist/*
+
+To test uploaded package:
+
+    pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple lottery-ticket-pruner
 
 ## Testing
 

@@ -7,7 +7,7 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='lottery-ticket-pruner-JIM-MEYER',
+    name='lottery-ticket-pruner',
     version=lottery_ticket_pruner.__version__,
     author='Jim Meyer',
     author_email='jimm@racemed.com',

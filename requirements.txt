@@ -12,3 +12,6 @@ flake8==3.7.7
 
 # For running example
 pandas==1.0.3
+
+# For uploading to pypi
+twine==3.1.1
