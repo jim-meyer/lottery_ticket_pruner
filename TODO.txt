@@ -1,0 +1,45 @@
+TO DO
+-----
+Make sure things work with TF2
+Finish README
+Use github to build upon pushes?
+Post package to pypi
+    Keyword: Keras, pruned, CNN pruning, DNN pruning, lottery ticket pruning
+    https://packaging.python.org/guides/using-testpypi/
+Make sure package works with python 3.5 thru 3.8
+Implement same-sign pruning
+
+
+DONE
+----
+Get "pip install" working
+    - Basic install
+    - Create wheel
+    - Add testing support
+Enable code coverage report generation
+Find better solution than passing around 2 different kinds of prune functions (local and global)
+Inspect code coverage misses
+Make sure unit tests pass reliably even after multiple invocations
+Make sure code can be imported intelligently. "import lottery_ticker_pruner; ltp = LotteryTicketPruner(model)"
+Make sure we're doing logging in interesting places
+Document the code thoroughly
+Figure out why tox isn't showing proper code coverage numbers but `pytest --cov=lottery_ticket_pruner --cov-branch --cov-append --cov-report=term --pyargs lottery_ticket_pruner tests` is
+Add copyrights to code
+Create example (using MNIST?)
+Removed restore_initial_weights() in favor of caller doing model.get_weights(), model.set_weights()
+Include original weights in results returned by iterate_prunables()
+Consider changing prune_weights() to calc_prune_mask() and apply_pruning() to apply_pruning(model)
+Implement 'large_final' pruning strategy
+Implement Dynamic Weight Rescaling
+Document the example better
+Review what all I should leave copyright in and what I shouldn't.
+Also check to see if including MIT license in the files is a good idea.
+    ANSWER: A single LICENSE file at root is sufficient.
+Train using patience setting for paper? Or arbitrary # of epochs?
+    ANSWER: Added support for patience callback. Using patience=3 in examples.
+See if pruning from transfer learning starting points instead of random weights has benefits
+    ANSWER: Yes, it definitely applies to transfer learning too.
+Set flake8 max line length to 120 and have it enforce. Reformat code accordingly as needed.
+Update example.py from transfer_learning_example.py
+Address all outstanding TODOs
+Implement inside my training pipeline to see if pruning results for DNNs show promise
