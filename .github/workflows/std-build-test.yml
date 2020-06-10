@@ -35,11 +35,11 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: pytest-results-${{ matrix.python-version }}
-        path: junit/test-results-${{ matrix.python-version }}.xml
+        path: build/unittest_results*.xml
       # Use always() to always run this step to publish test results when there are test failures
       if: ${{ always() }}
     - name: Upload code coverage report
       uses: actions/upload-artifact@v1
       with:
         name: coverage
-        path: covhtml
+        path: build/test_cov
