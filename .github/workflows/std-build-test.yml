@@ -28,9 +28,11 @@ jobs:
     - name: Lint with flake8
       run: |
         flake8 . --count --show-source
-    - name: Test with tox
+    - name: Run unit tests
       run: |
+        ls -al build
         python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov
+        ls -al build
     - name: Upload test results
       uses: actions/upload-artifact@v1
       with:
