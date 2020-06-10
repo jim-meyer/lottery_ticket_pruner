@@ -1,4 +1,4 @@
 from .lottery_ticket_pruner import LotteryTicketPruner  # noqa
 from .keras_pruner_callback import PrunerCallback  # noqa
 
-__version__ = '0.0.1-alpha.2'
+__version__ = '0.0.1a3'
