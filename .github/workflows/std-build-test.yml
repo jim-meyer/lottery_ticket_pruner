@@ -30,7 +30,7 @@ jobs:
         flake8 . --count --show-source
     - name: Test with tox
       run: |
-        tox -e py
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov
     - name: Upload test results
       uses: actions/upload-artifact@v1
       with:
@@ -43,3 +43,4 @@ jobs:
       with:
         name: coverage
         path: build/test_cov
+      if: ${{ always() }}
