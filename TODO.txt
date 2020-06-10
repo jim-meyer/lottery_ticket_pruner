@@ -6,6 +6,7 @@ Use github to build upon pushes?
 Post package to pypi
     Keyword: Keras, pruned, CNN pruning, DNN pruning, lottery ticket pruning
     https://packaging.python.org/guides/using-testpypi/
+Make sure package works with python 3.5 thru 3.8
 Implement same-sign pruning
 
 
