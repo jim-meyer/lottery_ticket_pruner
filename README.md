@@ -93,21 +93,13 @@ Using Dynamic Weight Reduction:
 
 The information in this section is only needed if you need to modify this package.
 
-## Building the python package
+This repo uses Github Actions to perform [Continuous Integration checks, tests for each push, pull request](https://github.com/jim-meyer/lottery_ticket_pruner/actions).
 
-Steps from https://packaging.python.org/tutorials/packaging-projects/:
+Likewise, when a new release is tagged a new version of the package is automatically built and uploaded to [pypi](https://pypi.org).
 
-    pip install -r requirements.txt
-    python setup.py sdist bdist_wheel
-    twine upload --repository testpypi dist/*
+## Local Testing
 
-To install the uploaded package:
-
-    pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple lottery-ticket-pruner
-
-## Testing
-
-Running unit tests is done via [tox](https://pypi.org/project/tox/). This automatically generates a code coverage report too.
+Running unit tests locally is done via [tox](https://pypi.org/project/tox/). This automatically generates a code coverage report too.
 
     tox
 
