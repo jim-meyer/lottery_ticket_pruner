@@ -30,7 +30,7 @@ jobs:
         flake8 . --count --show-source
     - name: Run unit tests
       run: |
-        ls -al build
+        ls -al
         python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov
         ls -al build
     - name: Upload test results
