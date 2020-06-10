@@ -4,7 +4,7 @@ import keras
 import numpy as np
 
 import lottery_ticket_pruner
-from example.example import MNIST
+from examples.example import MNIST
 
 TEST_PRUNE_RATE = 0.5
 
