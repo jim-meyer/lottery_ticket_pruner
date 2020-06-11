@@ -2,7 +2,7 @@ TO DO
 -----
 Make sure things work with TF2
 Finish README
-Make sure package works with python 3.5 thru 3.8
+Make sure package works with python 3.6 thru 3.8
 Implement same-sign pruning
 
 

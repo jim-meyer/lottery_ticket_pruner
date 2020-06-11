@@ -110,6 +110,10 @@ XXX pruning strategy?
 A: The goal of this repo is to provide an implementation of the more effective strategies described
 by the two papers. If other effective strategies are developed then pull requests implementing those strategies are welcomed.
 
+Q: Why isn't python 3.5 supported?
+
+A: keras>=2.1.0, pandas>=1.0 don't support python 3.5. Hence this package does not either.
+
 # Contributing
 
 Pull requests to [this repo](https://github.com/jim-meyer/lottery_ticket_pruner) are always welcome.
