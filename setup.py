@@ -31,8 +31,17 @@ setuptools.setup(
     install_requires=['keras>=2.1.0', 'numpy>=1.18.3'],
     classifiers=[
         'Programming Language :: Python :: 3',
+        "Framework :: Keras",
+        "Development Status :: 4 - Beta",
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Image Recognition",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Software Development :: Libraries",
     ],
     python_requires=('>=3.6')
 )

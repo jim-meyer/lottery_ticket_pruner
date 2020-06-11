@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        #python-version: [3.5, 3.6, 3.7, 3.8]
-        python-version: [3.6]
+        #python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7]
 
     steps:
     - uses: actions/checkout@v2
@@ -31,9 +31,7 @@ jobs:
         flake8 . --count --show-source
     - name: Run unit tests
       run: |
-        ls -al
-        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov
-        ls -al build
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov-${{ matrix.python-version }}
     - name: Upload test results
       uses: actions/upload-artifact@v1
       with:
@@ -44,6 +42,6 @@ jobs:
     - name: Upload code coverage report
       uses: actions/upload-artifact@v1
       with:
-        name: coverage
-        path: build/test_cov/
+        name: coverage-${{ matrix.python-version }}
+        path: build/test_cov-${{ matrix.python-version }}
       if: ${{ always() }}
