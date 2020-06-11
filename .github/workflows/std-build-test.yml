@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # TF>=2.0 needed for python 3.8. So we test TF 2.x on 3.8, 3.9 and TF 1.x on 3.6, 3.7
+        # TF 2.x needed for python 3.8 so we test TF 2.x on 3.8, 3.9 and TF 1.x on 3.6, 3.7
         python-version: [3.6, 3.7]
     steps:
     - uses: actions/checkout@v2
