@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements_frozen.txt
     - name: Lint with flake8
       run: |
         flake8 . --count --show-source
@@ -56,7 +56,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements_tf2.txt
+        pip install -r requirements_tf2_frozen.txt
     - name: Lint with flake8
       run: |
         flake8 . --count --show-source

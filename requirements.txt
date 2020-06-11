@@ -1,3 +1,13 @@
+# This file contains the high level dependencies needed for tensorflow 1.x support
+# This file is intended to be used to create a frozen set of dependencies. Each time
+# this file changes one should:
+#   virtualenv <new env dir>
+#   <new env dir>/bin/activate
+#   pip install -r requirements.txt
+#   pip freeze > requirements_frozen.txt
+# Then when doing 'pip install -r ...' the *_frozen.txt file should be used.
+# This helps keep builds reproducible. And avoids breakages if/when new versions
+# of dependent packages, direct or indirect, are released that have incompatibilities.
 keras==2.2.4
 numpy==1.18.3
 tensorflow==1.15.2

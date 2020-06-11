@@ -1,3 +1,13 @@
+# This file contains the high level dependencies needed for tensorflow 2.x support
+# This file is intended to be used to create a frozen set of dependencies. Each time
+# this file changes one should:
+#   virtualenv <new env dir>
+#   <new env dir>/bin/activate
+#   pip install -r requirements_tf2.txt
+#   pip freeze > requirements_tf2_frozen.txt
+# Then when doing 'pip install -r ...' the *_frozen.txt file should be used.
+# This helps keep builds reproducible. And avoids breakages if/when new versions
+# of dependent packages, direct or indirect, are released that have incompatibilities.
 numpy==1.18.5
 tensorflow==2.2.0
 
