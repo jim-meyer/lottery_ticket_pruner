@@ -4,9 +4,9 @@ import random
 import sys
 import unittest
 
-import keras
 import numpy as np
 import tensorflow
+import tensorflow.keras as keras
 
 import lottery_ticket_pruner
 from lottery_ticket_pruner.lottery_ticket_pruner import _prune_func_smallest_weights, \
@@ -445,9 +445,12 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertAlmostEqual(prune_rate, num_pruned / total_weights, places=1)
         # Given the seeding we did at the beginning of this test these results should be reproducible. They were
         # obtained by manual inspection.
-        self.assertEqual(67, pruned_counts[0])
-        self.assertEqual(3, pruned_counts[1])
-        self.assertEqual(5, pruned_counts[2])
+        # Ranges are used here since TF 1.x on python 3.6, 3.7 gives slightly different results from TF 2.x on
+        # python 3.8. These assertions accomodate both.
+        self.assertTrue(62 <= pruned_counts[0] <= 67)
+        self.assertTrue(3 <= pruned_counts[1] <= 5)
+        self.assertTrue(5 <= pruned_counts[2] <= 8)
+        self.assertEqual(75, sum(pruned_counts))
 
         # Now prune once more to make sure cumulative pruning works as expected
         total_prune_rate = prune_rate
@@ -466,9 +469,12 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         self.assertEqual(num_pruned / total_weights, total_prune_rate)
         # Given the seeding we did at the beginning of this test these results should be reproducible. They were
         # obtained by manual inspection.
-        self.assertEqual(80, pruned_counts[0])
-        self.assertEqual(4, pruned_counts[1])
-        self.assertEqual(6, pruned_counts[2])
+        # Ranges are used here since TF 1.x on python 3.6, 3.7 gives slightly different results from TF 2.x on
+        # python 3.8. These assertions accomodate both.
+        self.assertTrue(74 <= pruned_counts[0] <= 78)
+        self.assertTrue(3 <= pruned_counts[1] <= 5)
+        self.assertTrue(9 <= pruned_counts[2] <= 11)
+        self.assertEqual(90, sum(pruned_counts))
 
     #
     # calc_prune_mask()

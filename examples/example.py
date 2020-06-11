@@ -8,7 +8,7 @@ import json
 import math
 import os
 
-import keras
+import tensorflow.keras as keras
 from keras.datasets import cifar10
 from keras.datasets import mnist
 from keras.models import Sequential
@@ -151,7 +151,8 @@ class MNIST(object):
         model.add(Dense(self.dataset.num_classes, activation='softmax'))
 
         model.compile(loss=keras.losses.categorical_crossentropy,
-                      optimizer=keras.optimizers.Adadelta(),
+                      optimizer='adadelta',
+                      # optimizer=keras.optimizers.Adadelta(),  this doesn't work across TF 1.x, TF 2.x
                       metrics=['accuracy'])
         return model
 

@@ -1,5 +1,4 @@
-# keras==TODO
-numpy==1.18.3
+numpy==1.18.5
 tensorflow==2.2.0
 
 # For running unit tests

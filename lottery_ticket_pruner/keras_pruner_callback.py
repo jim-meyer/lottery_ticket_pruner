@@ -1,4 +1,4 @@
-import keras
+import tensorflow.keras as keras
 
 
 class PrunerCallback(keras.callbacks.Callback):
