@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        #python-version: [3.5, 3.6, 3.7, 3.8]
-        python-version: [3.6]
+        python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
+        #python-version: [3.6]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,31 +26,22 @@ jobs:
         # These will be installed by requirements.txt
         # pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-#    - name: Lint with flake8
-#      run: |
-#        flake8 . --count --show-source
-#    - name: Run unit tests
-#      run: |
-#        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov
-#    - name: Upload test results
-#      uses: actions/upload-artifact@v1
-#      with:
-#        name: pytest-results-${{ matrix.python-version }}
-#        path: build/unittest_results-${{ matrix.python-version }}.xml
-#      # Use always() to always run this step to publish test results when there are test failures
-#      if: ${{ always() }}
-#    - name: Upload code coverage report
-#      uses: actions/upload-artifact@v1
-#      with:
-#        name: coverage
-#        path: build/test_cov/
-#      if: ${{ always() }}
-    - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.TESTPYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.TESTPYPI_PASSWORD }}
+    - name: Lint with flake8
       run: |
-        echo ${TWINE_USERNAME} | cut -c -3
-        echo ${TESTPYPI_PASSWORD} | cut -c -5
-        python setup.py sdist bdist_wheel
-        twine upload --repository testpypi dist/*
+        flake8 . --count --show-source
+    - name: Run unit tests
+      run: |
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov
+    - name: Upload test results
+      uses: actions/upload-artifact@v1
+      with:
+        name: pytest-results-${{ matrix.python-version }}
+        path: build/unittest_results-${{ matrix.python-version }}.xml
+      # Use always() to always run this step to publish test results when there are test failures
+      if: ${{ always() }}
+    - name: Upload code coverage report
+      uses: actions/upload-artifact@v1
+      with:
+        name: coverage
+        path: build/test_cov/
+      if: ${{ always() }}

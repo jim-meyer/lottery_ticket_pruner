@@ -15,8 +15,7 @@ be applied to further optimize these now sparse models to decrease model size an
 
 # Installation
 
-    cd <root directory of this repo>
-    pip install -e .
+    pip install lottery-ticket-pruner
 
 # Usage
 
@@ -44,7 +43,7 @@ A typical use of the code in this repo looks something like this:
     trained_loss, trained_accuracy = model.evaluate(x_test, y_test)
 
 For a full working example that computes the accuracy for an untrained model that has been pruned, as well
-as training a model from scratch using lotttery ticket pruning, see the [example code](examples/example.py).
+as training a model from scratch using lotttery ticket pruning, see the [example code](https://github.com/jim-meyer/lottery_ticket_pruner/examples/example.py).
 This example code uses the [MNIST](https://keras.io/api/datasets/mnist/) and
 [CIFAR10](https://keras.io/api/datasets/cifar10/) datasets.
 
@@ -113,4 +112,4 @@ by the two papers. If other effective strategies are developed then pull request
 
 # Contributing
 
-Pull requests to [this repo](https://github.com/jim-meyer/lottery_ticket_prune) are always welcome.
+Pull requests to [this repo](https://github.com/jim-meyer/lottery_ticket_pruner) are always welcome.

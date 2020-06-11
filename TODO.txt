@@ -2,9 +2,6 @@ TO DO
 -----
 Make sure things work with TF2
 Finish README
-Post package to pypi
-    Keyword: Keras, pruned, CNN pruning, DNN pruning, lottery ticket pruning
-    https://packaging.python.org/guides/using-testpypi/
 Make sure package works with python 3.5 thru 3.8
 Implement same-sign pruning
 
@@ -43,3 +40,6 @@ Update example.py from transfer_learning_example.py
 Address all outstanding TODOs
 Implement inside my training pipeline to see if pruning results for DNNs show promise
 Use github to build upon pushes?
+Post package to pypi
+    Keyword: Keras, pruned, CNN pruning, DNN pruning, lottery ticket pruning
+    https://packaging.python.org/guides/using-testpypi/
