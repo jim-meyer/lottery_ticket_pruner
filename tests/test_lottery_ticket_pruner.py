@@ -447,9 +447,9 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         # obtained by manual inspection.
         # Ranges are used here since TF 1.x on python 3.6, 3.7 gives slightly different results from TF 2.x on
         # python 3.8. These assertions accomodate both.
-        self.assertTrue(62 <= pruned_counts[0] <= 67)
-        self.assertTrue(3 <= pruned_counts[1] <= 5)
-        self.assertTrue(5 <= pruned_counts[2] <= 8)
+        self.assertTrue(62 <= pruned_counts[0] <= 67, msg=f'pruned_counts={pruned_counts}')
+        self.assertTrue(3 <= pruned_counts[1] <= 5, msg=f'pruned_counts={pruned_counts}')
+        self.assertTrue(5 <= pruned_counts[2] <= 9, msg=f'pruned_counts={pruned_counts}')
         self.assertEqual(75, sum(pruned_counts))
 
         # Now prune once more to make sure cumulative pruning works as expected
@@ -471,9 +471,9 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         # obtained by manual inspection.
         # Ranges are used here since TF 1.x on python 3.6, 3.7 gives slightly different results from TF 2.x on
         # python 3.8. These assertions accomodate both.
-        self.assertTrue(74 <= pruned_counts[0] <= 78)
-        self.assertTrue(3 <= pruned_counts[1] <= 5)
-        self.assertTrue(9 <= pruned_counts[2] <= 11)
+        self.assertTrue(74 <= pruned_counts[0] <= 78, msg=f'pruned_counts={pruned_counts}')
+        self.assertTrue(3 <= pruned_counts[1] <= 5, msg=f'pruned_counts={pruned_counts}')
+        self.assertTrue(9 <= pruned_counts[2] <= 12, msg=f'pruned_counts={pruned_counts}')
         self.assertEqual(90, sum(pruned_counts))
 
     #
