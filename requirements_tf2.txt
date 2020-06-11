@@ -1,4 +1,4 @@
-keras==2.2.4
+# keras==TODO
 numpy==1.18.3
 tensorflow==2.2.0
 
