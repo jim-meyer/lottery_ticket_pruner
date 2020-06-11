@@ -1,6 +1,6 @@
 keras==2.2.4
 numpy==1.18.3
-tensorflow==1.13.1
+tensorflow==1.15.2
 
 # For running unit tests
 tox==3.15.0
