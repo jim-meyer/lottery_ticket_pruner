@@ -8,13 +8,11 @@ import json
 import math
 import os
 
-import keras
-from keras.datasets import cifar10
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras import backend as K
+import tensorflow.keras as keras
+from tensorflow.keras.datasets import cifar10, mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras import backend as K
 
 import numpy as np
 import pandas as pd
@@ -151,7 +149,8 @@ class MNIST(object):
         model.add(Dense(self.dataset.num_classes, activation='softmax'))
 
         model.compile(loss=keras.losses.categorical_crossentropy,
-                      optimizer=keras.optimizers.Adadelta(),
+                      optimizer='adadelta',
+                      # optimizer=keras.optimizers.Adadelta(),  this doesn't work across TF 1.x, TF 2.x
                       metrics=['accuracy'])
         return model
 

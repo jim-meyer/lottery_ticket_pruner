@@ -2,7 +2,7 @@ import logging
 import math
 import sys
 
-import keras
+import tensorflow.keras as keras
 import numpy as np
 
 logger = logging.getLogger('lottery_ticket_pruner')
