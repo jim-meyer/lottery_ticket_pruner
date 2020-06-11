@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # TF 2.x needed for python 3.8 so we test TF 2.x on 3.8, 3.9 and TF 1.x on 3.6, 3.7
+        # TF 2.x needed for python 3.8 so we test TF 2.x on 3.8 and TF 1.x on 3.6, 3.7
         python-version: [3.6, 3.7]
     steps:
     - uses: actions/checkout@v2
@@ -41,12 +41,12 @@ jobs:
         name: coverage-${{ matrix.python-version }}
         path: build/test_cov-${{ matrix.python-version }}
       if: ${{ always() }}
-  build_py38_py39_tf2:
+  build_py38_tf2:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # TF 2.x needed for python 3.8 so we test TF 2.x on 3.8, 3.9 and TF 1.x on 3.6, 3.7
-        python-version: [3.8, 3.9]
+        # TF 2.x needed for python 3.8 so we test TF 2.x on 3.8 and TF 1.x on 3.6, 3.7
+        python-version: [3.8]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
