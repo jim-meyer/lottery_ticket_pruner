@@ -28,7 +28,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/jim-meyer/lottery_ticket_pruner',
     packages=setuptools.find_packages(),
-    install_requires=['keras>=2.1.0', 'numpy>=1.18.3'],
+    install_requires=['keras>=2.1.0', 'tensorflow>=1.12', 'numpy>=1.18.3'],
     classifiers=[
         'Programming Language :: Python :: 3',
         "Development Status :: 4 - Beta",

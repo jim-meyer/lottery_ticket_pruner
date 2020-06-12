@@ -1,9 +1,23 @@
 TO DO
 -----
+Fix this when using TF2 on AWS EC2 instance:
+    2020-06-12 03:17:21.969689: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+    Traceback (most recent call last):
+      File "example.py", line 373, in <module>
+        losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.dwr, args.epochs, output_dir)
+      File "example.py", line 269, in evaluate
+        pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
+      File "/home/ubuntu/anaconda3/lib/python3.7/site-packages/lottery_ticket_pruner/lottery_ticket_pruner.py", line 249, in __init__
+        if self._prunable(layer, weights):
+      File "/home/ubuntu/anaconda3/lib/python3.7/site-packages/lottery_ticket_pruner/lottery_ticket_pruner.py", line 285, in _prunable
+        keras.layers.Convolution2DTranspose,
+    AttributeError: module 'keras.layers' has no attribute 'Convolution2DTranspose'
+
 Create shell scripts to run complete matrix of example.py
 Finish README
-Hook up posting to pypi.org
 Delete TODO.txt
+Bump version to legit first version
+Change API token to one scoped to only lottery_ticket_pruner repo
 Implement same-sign pruning
 
 
@@ -46,3 +60,4 @@ Post package to pypi
     https://packaging.python.org/guides/using-testpypi/
 Make sure package works with python 3.6 thru 3.8
 Make sure things work with TF2
+Hook up posting to pypi.org
