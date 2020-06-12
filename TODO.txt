@@ -1,8 +1,9 @@
 TO DO
 -----
-Make sure things work with TF2
+Create shell scripts to run complete matrix of example.py
 Finish README
-Make sure package works with python 3.6 thru 3.8
+Hook up posting to pypi.org
+Delete TODO.txt
 Implement same-sign pruning
 
 
@@ -43,3 +44,5 @@ Use github to build upon pushes?
 Post package to pypi
     Keyword: Keras, pruned, CNN pruning, DNN pruning, lottery ticket pruning
     https://packaging.python.org/guides/using-testpypi/
+Make sure package works with python 3.6 thru 3.8
+Make sure things work with TF2

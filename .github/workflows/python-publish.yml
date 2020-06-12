@@ -34,18 +34,16 @@ jobs:
         name: python-package
         path: dist/
       if: ${{ always() }}
-
     - name: Verify testpypi package installs
       run: |
         pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple lottery-ticket-pruner
     - name: Verify testpypi package runs
       run: |
         python -c "import lottery_ticket_pruner; print(lottery_ticket_pruner.__version__)"
-
-#    - name: Build and publish (pypi)
-#      env:
-#        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-#        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-#      run: |
-#        python setup.py sdist bdist_wheel
-#        twine upload dist/*
+    - name: Build and publish (pypi)
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        python setup.py sdist bdist_wheel
+        twine upload dist/*
