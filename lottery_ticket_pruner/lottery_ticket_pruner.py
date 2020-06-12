@@ -281,11 +281,14 @@ class LotteryTicketPruner(object):
     def _prunable(self, layer, weights):
         return isinstance(layer, (keras.layers.Conv1D,
                                   keras.layers.SeparableConv1D,
-                                  keras.layers.Conv2D, keras.layers.Conv2DTranspose, keras.layers.Convolution2D,
-                                  keras.layers.Convolution2DTranspose,
+                                  keras.layers.Conv2D,
+                                  keras.layers.Conv2DTranspose,
+                                  # keras.layers.Convolution2DTranspose,    an alias for keras.layers.Conv2DTranspose
+                                  keras.layers.Convolution2D,
                                   keras.layers.DepthwiseConv2D,
                                   keras.layers.SeparableConv2D,
-                                  keras.layers.Conv3D, keras.layers.Convolution3D,
+                                  keras.layers.Conv3D,
+                                  keras.layers.Convolution3D,
                                   keras.layers.Dense,
                                   )) and len(weights.shape) > 1
 
