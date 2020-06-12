@@ -44,7 +44,8 @@ class Dataset(object):
         # The MNIST and CIFAR10 datasets each have 10 classes
         self.num_classes = 10
         # the data, split between train and test sets
-        func_map = {'mnist': self.load_mnist_data, 'cifar10': self.load_cifar10_data,
+        func_map = {'mnist': self.load_mnist_data,
+                    'cifar10': self.load_cifar10_data,
                     'cifar10_reduced_10x': self.load_cifar10_reduced_10x_data}
         if which_set in func_map:
             (x_train, y_train), (x_test, y_test) = func_map[which_set]()
