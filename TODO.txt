@@ -1,10 +1,17 @@
 TO DO
 -----
-Finish README
-    ec2_instance_ip=
-    scp -i ~/.ssh/MLProjectsKeyPair.pem /cygdrive/c/git/lottery_ticket_pruner/dist/lottery_ticket_pruner-0.0.1a13-py2.py3-none-any.whl ubuntu@${ec2_instance_ip}:/home/ubuntu
-    ssh -i ~/.ssh/MLProjectsKeyPair.pem ubuntu@${ec2_instance_ip} mkdir ltp
-    scp -r -i ~/.ssh/MLProjectsKeyPair.pem /cygdrive/c/git/lottery_ticket_pruner/examples/ ubuntu@${ec2_instance_ip}:/home/ubuntu/ltp
+Fix this when using TF2 on AWS EC2 instance:
+    2020-06-12 03:17:21.969689: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+    Traceback (most recent call last):
+      File "example.py", line 373, in <module>
+        losses, accuracies = evaluate(args.which_set, args.prune_strategy, args.dwr, args.epochs, output_dir)
+      File "example.py", line 269, in evaluate
+        pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
+      File "/home/ubuntu/anaconda3/lib/python3.7/site-packages/lottery_ticket_pruner/lottery_ticket_pruner.py", line 249, in __init__
+        if self._prunable(layer, weights):
+      File "/home/ubuntu/anaconda3/lib/python3.7/site-packages/lottery_ticket_pruner/lottery_ticket_pruner.py", line 285, in _prunable
+        keras.layers.Convolution2DTranspose,
+    AttributeError: module 'keras.layers' has no attribute 'Convolution2DTranspose'
 
     ssh -i ~/.ssh/MLProjectsKeyPair.pem ubuntu@${ec2_instance_ip}
     source /home/ubuntu/anaconda3/bin/activate tensorflow_p36
@@ -15,6 +22,7 @@ Finish README
     aws s3api put-object --bucket lottery-ticket-pruner --key ${timestamp}/
     echo "aws s3 cp * s3://lottery-ticket-pruner/" >> example.sh
     ./example.sh || sudo shutdown -h now
+Finish README
 Delete TODO.txt
 Bump version to legit first version
 Change API token to one scoped to only lottery_ticket_pruner repo
