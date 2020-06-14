@@ -166,7 +166,7 @@ class MNIST(object):
 
     def evaluate(self, model):
         loss, accuracy = model.evaluate(self.dataset.x_test, self.dataset.y_test, verbose=0)
-        return loss, accuracy
+        return float(loss), float(accuracy)
 
     def get_epoch_logs(self):
         """ Returns a dict of each epoch's accuracy, loss, validation accuracy, validation loss.
@@ -219,6 +219,17 @@ def _merge_epoch_logs(epoch_logs, epoch_logs2):
         else:
             epoch_logs[epoch].update(logs_dict)
     return epoch_logs
+
+
+def _to_floats(d):
+    """ Walk through the dict and make sure all values are floats and not np.float32 or np.float64 since the latter
+    cannot be serialized to json.
+    """
+    for k, v in d.items():
+        if isinstance(v, dict):
+            _to_floats(v)
+        elif isinstance(v, (np.float16, np.float32, np.float64)):
+            d[k] = float(v)
 
 
 def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
@@ -320,6 +331,7 @@ def evaluate(which_set, prune_strategy, use_dwr, epochs, output_dir):
         losses[experiment], accuracies[experiment] = mnist_pruned.evaluate(prune_trained_model)
 
         epoch_logs = _merge_epoch_logs(epoch_logs, mnist_pruned.get_epoch_logs())
+        _to_floats(epoch_logs)
 
         # Periodically save the results to allow inspection during these multiple lengthy iterations
         with open(os.path.join(output_dir, 'epoch_logs.json'), 'w') as f:
