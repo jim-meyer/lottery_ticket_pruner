@@ -536,7 +536,6 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         num_in_expected_range = np.sum(pruned_weights >= expected_non_zero_min)
         self.assertEqual(num_interesting_layer_weights - num_zero, num_in_expected_range)
 
-    # TODO - enable this but need to fix code too
     @unittest.skip('Skipping this since it currently fails but is not a terribly high value issue to fix')
     def test_prune_func_large_final_same_weight_values(self):
         """ Tests case where many or all weights are same value. Hence we might be tempted to mask on all of the

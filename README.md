@@ -49,44 +49,102 @@ This example code uses the [MNIST](https://keras.io/api/datasets/mnist/) and
 
 # Results
 
-To see the effects of pruning at 20%, 44.72%, 81.18%, 98.78%, 99.98% using the 3 supported pruning strategies across the
-MNIST and CIFAR10 datasets, with and without Dynamic Weight Resizing (DWR) were obtained via:
+[examples/example.sh](https://github.com/jim-meyer/lottery_ticket_pruner/examples/example.py) was run to see the effects
+of pruning at 20%, 55.78%, 89.6%, 99.3% using the 3 supported pruning strategies across the MNIST and CIFAR10 datasets.
+Training was capped at 100 epochs to help control AWS expenses.
 
-To see the effects of pruning at 20%, 55.8%, 89.6%, 99.3% using the 3 supported pruning strategies across the
-MNIST and CIFAR10 datasets, with and without Dynamic Weight Resizing (DWR) were obtained via:
+The results averaged across 3 iterations:
 
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights_global
+## MNIST (100 epochs)
 
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights --dwr
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'mnist' --prune_strategy smallest_weights_global --dwr
+    |Prune Percentage|  |Dataset|   |Prune Strategy|            |Avg Accuracy|
+    |:---|              |:---|      |:---:|                     |:---:|
+    |n/a|               |mnist|     |n/a|                       |0.937|
+    |20%|               |mnist|     |large_final|               |0.935|
+    |20%|               |mnist|     |smallest_weights|          |0.936|
+    |20%|               |mnist|     |smallest_weights_global|   |0.939|
+    |55.78%|            |mnist|     |large_final|               |0.936|
+    |55.78%|            |mnist|     |smallest_weights|          |0.936|
+    |55.78%|            |mnist|     |smallest_weights_global|   |0.939|
+    |89.6%|             |mnist|     |large_final|               |0.936|
+    |89.6%|             |mnist|     |smallest_weights|          |0.937|
+    |89.6%|             |mnist|     |smallest_weights_global|   |0.939|
+    |99.33%|            |mnist|     |large_final|               |0.936|
+    |99.33%|            |mnist|     |smallest_weights|          |0.937|
+    |99.33%|            |mnist|     |smallest_weights_global|   |0.939|
 
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights_global
+## CIFAR (100 epochs)
 
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights --dwr
-    python examples/example.py --iterations 5 --epochs 100 --which_set 'cifar10' --prune_strategy smallest_weights_global --dwr
+    |Prune Percentage|  |Dataset|   |Prune Strategy|            |Avg Accuracy|
+    |:---|              |:---|      |:---:|                     |:---:|
+    |n/a|               |cifar10|   |n/a|                       |0.427|
+    |20%|               |cifar10|   |large_final|               |0.298|
+    |20%|               |cifar10|   |smallest_weights|          |0.427|
+    |20%|               |cifar10|   |smallest_weights_global|   |0.423|
+    |55.78%|            |cifar10|   |large_final|               |0.294|
+    |55.78%|            |cifar10|   |smallest_weights|          |0.427|
+    |55.78%|            |cifar10|   |smallest_weights_global|   |0.424|
+    |89.6%|             |cifar10|   |large_final|               |0.289|
+    |89.6%|             |cifar10|   |smallest_weights|          |0.427|
+    |89.6%|             |cifar10|   |smallest_weights_global|   |0.424|
+    |99.33%|            |cifar10|   |large_final|               |0.288|
+    |99.33%|            |cifar10|   |smallest_weights|          |0.428|
+    |99.33%|            |cifar10|   |smallest_weights_global|   |0.425|
 
-The results of averaging across 5 iterations, removing the min and max results were as follows:
+## CIFAR (500 epochs)
 
-TODO - add results here
+    |Prune Percentage|  |Dataset|   |Prune Strategy|            |Avg Accuracy|
+    |:---|              |:---|      |:---:|                     |:---:|
+    |n/a|               |cifar10|   |n/a|                       |0.550|
+    |20%|               |cifar10|   |smallest_weights_global|   |0.550|
+    |55.78%|            |cifar10|   |smallest_weights_global|   |0.552|
+    |89.6%|             |cifar10|   |smallest_weights_global|   |0.554|
+    |99.33%|            |cifar10|   |smallest_weights_global|   |0.554|
 
-    |Prune Percentage|  |Dataset|   |Prune Strategy|            |DWR?|      |Avg Accuracy|  |Avg Epochs|
-    |:---|              |:---|      |:---:|                     |:---:|     |:---:|         |:---:|
-    |20%|               |mnist|     |smallest_weights|          |False|     ||              ||
-    |20%|               |mnist|     |smallest_weights_global|   |False|     ||              ||
-    |20%|               |cifar10|   |smallest_weights|          |False|     ||              ||
-    |20%|               |cifar10|   |smallest_weights_global|   |False|     ||              ||
+# Pruning the initial model weights with no training
 
-Using Dynamic Weight Reduction:
+One of the surprising findings of these papers is that if we simply *do inference on the model using the original weights,
+with no training, but applying pruning the resulting models perform far (far!) better than a random guess*. Here are the
+results of inference done after applying pruning to the random initial weights of the model without any training. The
+initial model, used as an input to the pruning logic, was trained for 100 epochs.
 
-    |Prune Percentage|  |Dataset|   |Prune Strategy|            |DWR?|      |Avg Accuracy|  |Avg Epochs|
-    |:---|              |:---|      |:---:|                     |:---:|     |:---:|         |:---:|
-    |20%|               |mnist|     |smallest_weights|          |True|      ||              || 
-    |20%|               |mnist|     |smallest_weights_global|   |True|      ||              ||
-    |20%|               |cifar10|   |smallest_weights|          |True|      ||              || 
-    |20%|               |cifar10|   |smallest_weights_global|   |True|      ||              ||
+## MNIST
 
+    |Prune Percentage|  |Dataset|   |Prune Strategy|                        |Avg Accuracy|
+    |:---|              |:---|      |:---:|                                 |:---:|
+    |n/a|               |mnist|     |no pruning done - random weights|      |0.121|
+    |n/a|               |mnist|     |source model trained for 100 epochs|   |0.936|
+    |20%|               |mnist|     |large_final|                           |0.760|
+    |20%|               |mnist|     |smallest_weights|                      |0.737|
+    |20%|               |mnist|     |smallest_weights_global|               |0.722|
+    |55.78%|            |mnist|     |large_final|                           |0.911|
+    |55.78%|            |mnist|     |smallest_weights|                      |0.899|
+    |55.78%|            |mnist|     |smallest_weights_global|               |0.920|
+    |89.6%|             |mnist|     |large_final|                           |0.744|
+    |89.6%|             |mnist|     |smallest_weights|                      |0.703|
+    |89.6%|             |mnist|     |smallest_weights_global|               |0.925|
+    |99.33%|            |mnist|     |large_final|                           |0.176|
+    |99.33%|            |mnist|     |smallest_weights|                      |0.164|
+    |99.33%|            |mnist|     |smallest_weights_global|               |0.098|
+
+## CIFAR
+
+    |Prune Percentage|  |Dataset|   |Prune Strategy|                        |Avg Accuracy|
+    |:---|              |:---|      |:---:|                                 |:---:|
+    |n/a|               |cifar10|   |no pruning done - random weights|      |0.094|
+    |n/a|               |mnist|     |source model trained for 100 epochs|   |0.424|
+    |20%|               |cifar10|   |large_final|                           |0.232|
+    |20%|               |cifar10|   |smallest_weights|                      |0.180|
+    |20%|               |cifar10|   |smallest_weights_global|               |0.201|
+    |55.78%|            |cifar10|   |large_final|                           |0.192|
+    |55.78%|            |cifar10|   |smallest_weights|                      |0.240|
+    |55.78%|            |cifar10|   |smallest_weights_global|               |0.251|
+    |89.6%|             |cifar10|   |large_final|                           |0.101|
+    |89.6%|             |cifar10|   |smallest_weights|                      |0.102|
+    |89.6%|             |cifar10|   |smallest_weights_global|               |0.240|
+    |99.33%|            |cifar10|   |large_final|                           |0.100|
+    |99.33%|            |cifar10|   |smallest_weights|                      |0.099|
+    |99.33%|            |cifar10|   |smallest_weights_global|               |0.100|
 
 # Working In This Repo
 
