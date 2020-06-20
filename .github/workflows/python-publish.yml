@@ -36,7 +36,7 @@ jobs:
       if: ${{ always() }}
     - name: Verify testpypi package installs
       run: |
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple lottery-ticket-pruner
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple tensorflow==2.2.0 lottery-ticket-pruner
     - name: Verify testpypi package runs
       run: |
         python -c "import lottery_ticket_pruner; print(lottery_ticket_pruner.__version__)"
