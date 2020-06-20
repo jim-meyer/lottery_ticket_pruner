@@ -9,7 +9,7 @@ from examples.example import MNIST
 TEST_PRUNE_RATE = 0.5
 
 
-class TestVerificationCallback(keras.callbacks.Callback):
+class _VerificationCallback(keras.callbacks.Callback):
     """ Does verifications for these tests """
     def __init__(self, testcase):
         super().__init__()
@@ -69,7 +69,7 @@ class TestKerasPrunerCallback(unittest.TestCase):
     def test_callback(self):
         epochs = 2
         # Can't do this in constructor of MNISTTest() since we have a chicken and egg problem
-        self.mnist_test.init(self.pruner, TestVerificationCallback(self))
+        self.mnist_test.init(self.pruner, _VerificationCallback(self))
         self.pruner.calc_prune_mask(self.model, TEST_PRUNE_RATE, 'smallest_weights')
 
         self.mnist_test.fit(self.model, epochs)

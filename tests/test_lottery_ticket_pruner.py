@@ -1,11 +1,9 @@
 import logging
 import math
-import random
 import sys
 import unittest
 
 import numpy as np
-import tensorflow
 import tensorflow.keras as keras
 
 import lottery_ticket_pruner
@@ -29,7 +27,7 @@ def enable_debug_logging():
 # enable_debug_logging()
 
 
-class TestLotteryTicketStateManager(unittest.TestCase):
+class TestLotteryTicketPruner(unittest.TestCase):
     def _create_test_model(self):
         input = keras.Input(shape=TEST_DENSE_INPUT_DIMS, dtype='float32')
         x = keras.layers.Dense(TEST_NUM_CLASSES)(input)
@@ -391,94 +389,6 @@ class TestLotteryTicketStateManager(unittest.TestCase):
         expected = int(TEST_DENSE_LAYER_INPUTS * TEST_NUM_CLASSES * prune_rate)
         actual = np.sum(actual_weights[0])
         self.assertEqual(expected, actual)
-
-    #
-    # calc_prune_mask()
-    #   'smallest_weights_global'
-    #
-    def test_smallest_weights_global(self):
-        """ Tests case where many or all weights are same value. Hence we might be tempted to mask on all of the
-        smallest weights rather than honoring only up to the prune rate
-        """
-        random.seed(1234)
-        np.random.seed(2345)
-        # Dancing needed to work with TF 1.x and 2.x
-        if hasattr(tensorflow, 'set_random_seed'):
-            tensorflow.set_random_seed(3456)
-        else:
-            tensorflow.random.set_seed(3456)
-
-        model = self._create_test_dnn_model()
-        interesting_layers = [model.layers[1], model.layers[4], model.layers[8]]
-        interesting_weights_index = 0
-
-        # Make sure no weights are zero so our checks below for zeroes only existing in masked weights are reliable
-        weight_counts = []
-        for layer in interesting_layers:
-            weights = layer.get_weights()
-            weights[interesting_weights_index][weights[interesting_weights_index] == 0.0] = 0.1234
-            layer.set_weights(weights)
-            num_weights = np.prod(weights[interesting_weights_index].shape)
-            weight_counts.append(num_weights)
-
-        pruner = lottery_ticket_pruner.LotteryTicketPruner(model)
-
-        num_pruned1 = 0
-        for layer in interesting_layers:
-            weights = layer.get_weights()
-            num_pruned1 += np.sum(weights[interesting_weights_index] == 0.0)
-
-        prune_rate = 0.5
-        pruner.calc_prune_mask(model, prune_rate, 'smallest_weights_global')
-
-        # calc_prune_mask() shouldn't do the actual pruning so verify that weights didn't change
-        num_pruned2 = 0
-        for layer in interesting_layers:
-            weights = layer.get_weights()
-            num_pruned2 += np.sum(weights[interesting_weights_index] == 0.0)
-        self.assertEqual(num_pruned1, num_pruned2)
-
-        pruner.apply_pruning(model)
-        pruned_counts = []
-        for layer in interesting_layers:
-            weights = layer.get_weights()
-            pruned_counts.append(np.sum(weights[interesting_weights_index] == 0.0))
-
-        total_weights = np.sum(weight_counts)
-        num_pruned = np.sum(pruned_counts)
-        self.assertAlmostEqual(prune_rate, num_pruned / total_weights, places=1)
-        # Given the seeding we did at the beginning of this test these results should be reproducible. They were
-        # obtained by manual inspection.
-        # Ranges are used here since TF 1.x on python 3.6, 3.7 gives slightly different results from TF 2.x on
-        # python 3.8. These assertions accomodate both.
-        self.assertTrue(62 <= pruned_counts[0] <= 67, msg=f'pruned_counts={pruned_counts}')
-        self.assertTrue(2 <= pruned_counts[1] <= 5, msg=f'pruned_counts={pruned_counts}')
-        self.assertTrue(5 <= pruned_counts[2] <= 9, msg=f'pruned_counts={pruned_counts}')
-        self.assertEqual(75, sum(pruned_counts))
-
-        # Now prune once more to make sure cumulative pruning works as expected
-        total_prune_rate = prune_rate
-        prune_rate = 0.2
-        total_prune_rate = total_prune_rate + (1.0 - total_prune_rate) * prune_rate
-        pruner.calc_prune_mask(model, prune_rate, 'smallest_weights_global')
-        pruner.apply_pruning(model)
-
-        pruned_counts = []
-        for layer in interesting_layers:
-            weights = layer.get_weights()
-            pruned_counts.append(np.sum(weights[interesting_weights_index] == 0.0))
-
-        total_weights = np.sum(weight_counts)
-        num_pruned = np.sum(pruned_counts)
-        self.assertEqual(num_pruned / total_weights, total_prune_rate)
-        # Given the seeding we did at the beginning of this test these results should be reproducible. They were
-        # obtained by manual inspection.
-        # Ranges are used here since TF 1.x on python 3.6, 3.7 gives slightly different results from TF 2.x on
-        # python 3.8. These assertions accomodate both.
-        self.assertTrue(74 <= pruned_counts[0] <= 78, msg=f'pruned_counts={pruned_counts}')
-        self.assertTrue(2 <= pruned_counts[1] <= 5, msg=f'pruned_counts={pruned_counts}')
-        self.assertTrue(9 <= pruned_counts[2] <= 12, msg=f'pruned_counts={pruned_counts}')
-        self.assertEqual(90, sum(pruned_counts))
 
     #
     # calc_prune_mask()
