@@ -2,7 +2,6 @@ import logging
 import math
 import sys
 
-import tensorflow.keras as keras
 import numpy as np
 
 logger = logging.getLogger('lottery_ticket_pruner')
@@ -224,6 +223,22 @@ class LotteryTicketPruner(object):
             which weights of the model being trained are to be pruned.
             Some pruning strategies require access to the initial weights of the model to determine the pruning mask.
         """
+        self.prunable_layer_names = ('Conv1D',
+                                     'Conv2D',
+                                     'Conv2DTranspose',
+                                     'Conv3D',
+                                     'Conv3DTranspose',
+                                     'Convolution1D',
+                                     'Convolution2D',
+                                     'Convolution2DTranspose',
+                                     'Convolution3D',
+                                     'Convolution3DTranspose',
+                                     'Dense',
+                                     'DepthwiseConv2D',
+                                     'SeparableConv1D',
+                                     'SeparableConv2D',
+                                     'SeparableConvolution1D',
+                                     'SeparableConvolution2D')
 
         # Now determine which weights of which layers are prunable
         layer_index = 0
@@ -279,18 +294,17 @@ class LotteryTicketPruner(object):
                         layer.name, getattr(layer, 'output_shape', None), output_shape))
 
     def _prunable(self, layer, weights):
-        return isinstance(layer, (keras.layers.Conv1D,
-                                  keras.layers.SeparableConv1D,
-                                  keras.layers.Conv2D,
-                                  keras.layers.Conv2DTranspose,
-                                  # keras.layers.Convolution2DTranspose,    an alias for keras.layers.Conv2DTranspose
-                                  keras.layers.Convolution2D,
-                                  keras.layers.DepthwiseConv2D,
-                                  keras.layers.SeparableConv2D,
-                                  keras.layers.Conv3D,
-                                  keras.layers.Convolution3D,
-                                  keras.layers.Dense,
-                                  )) and len(weights.shape) > 1
+        """ Depending on how callers import keras and what version of tensorflow is being used  the package path to the
+         layers we're interested in can be any of (at least):
+                keras.layers.Conv1D
+                keras.layers.convolutational.Conv1D
+                tensorflow.python.keras.layers.convolutational.Conv1D
+         Hence we use some relaxed logic here.
+         This is unfortunate since it potentially excludes subclasses of any of the supported keras layers from being
+         prunable.
+         """
+        return len(weights.shape) > 1 and 'keras.layers' in type(layer).__module__ and type(
+            layer).__name__ in self.prunable_layer_names
 
     def apply_dwr(self, model):
         """ Applies Dynamic Weight Rescaling (DWR) to the unpruned weights in the model.

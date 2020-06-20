@@ -27,7 +27,8 @@ jobs:
         flake8 . --count --show-source
     - name: Run unit tests
       run: |
-        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov-${{ matrix.python-version }}
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --ignore-glob 'tests/*_randseed.py'
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}-randseed.xml --cov-append --cov-report html:build/test_cov-${{ matrix.python-version }} tests/*_randseed.py
     - name: Upload test results
       uses: actions/upload-artifact@v1
       with:
@@ -62,7 +63,8 @@ jobs:
         flake8 . --count --show-source
     - name: Run unit tests
       run: |
-        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --cov-report html:build/test_cov-${{ matrix.python-version }}
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}.xml --ignore-glob 'tests/*_randseed.py'
+        python -m pytest --cov=lottery_ticket_pruner --cov-branch --junitxml build/unittest_results-${{ matrix.python-version }}-randseed.xml --cov-append --cov-report html:build/test_cov-${{ matrix.python-version }} tests/*_randseed.py
     - name: Upload test results
       uses: actions/upload-artifact@v1
       with:

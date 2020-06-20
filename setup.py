@@ -28,7 +28,10 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/jim-meyer/lottery_ticket_pruner',
     packages=setuptools.find_packages(),
-    install_requires=['keras>=2.1.0', 'tensorflow>=1.12', 'numpy>=1.18.3'],
+    # Don't specify version of tensorflow so that this package can easily be used in AWS deep learning AMIs
+    # where the "tensorflow" package is actually named "tensorflow-gpu"
+    # install_requires=['keras>=2.1.0', 'tensorflow>=1.12', 'numpy>=1.18.3'],
+    install_requires=['keras>=2.1.0', 'numpy>=1.18.3'],
     classifiers=[
         'Programming Language :: Python :: 3',
         "Development Status :: 4 - Beta",
