@@ -5,11 +5,16 @@ import unittest
 #   import tensorflow.keras as keras
 #   from tensorflow.python import keras
 #   import keras
-import keras
+try:
+    import keras
+    KERAS_IMPORTED = True
+except ImportError:
+    KERAS_IMPORTED = False
 
 import lottery_ticket_pruner
 
 
+@unittest.skipIf(not KERAS_IMPORTED, 'Skipping unit tests that uses `import keras` since keras is not installed per se')
 class TestImportKeras(unittest.TestCase):
     def test_inception_v3(self):
         model = keras.applications.InceptionV3(input_shape=(299, 299, 3),
