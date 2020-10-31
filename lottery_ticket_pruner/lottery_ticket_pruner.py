@@ -2,12 +2,29 @@ import logging
 import math
 import sys
 
+import tensorflow as tf
 import numpy as np
 
-logger = logging.getLogger('lottery_ticket_pruner')
+logger = logging.getLogger("lottery_ticket_pruner")
+convolutional_layer_types = [tf.keras.layers.Conv1D,
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Conv2DTranspose,
+            tf.keras.layers.Conv3D,
+            tf.keras.layers.Conv3DTranspose,
+            tf.keras.layers.Convolution1D,
+            tf.keras.layers.Convolution2D,
+            tf.keras.layers.Convolution2DTranspose,
+            tf.keras.layers.Convolution3D,
+            tf.keras.layers.Convolution3DTranspose,
+            tf.keras.layers.DepthwiseConv2D,
+            tf.keras.layers.SeparableConv1D,
+            tf.keras.layers.SeparableConv2D,
+            tf.keras.layers.SeparableConvolution1D,
+            tf.keras.layers.SeparableConvolution2D,]
 
-
-def _prune_func_random(initial_weights, pretrained_weights, current_weights, current_mask, prune_percentage):
+def _prune_func_random(
+    initial_weights, pretrained_weights, current_weights, current_mask, prune_percentage
+):
     """ Randomly prunes the weights.
     This function gets called with information about the layer being pruned including the initial weights, the current
     weights, the current mask. This function should not alter these.
@@ -24,8 +41,11 @@ def _prune_func_random(initial_weights, pretrained_weights, current_weights, cur
         20 weights.
     :returns The new pruning mask. This is cumulative and hence should mask more weights than `current_mask`.
     """
-    logger.debug('Randomly pruning weights of shape {}. Prune percentage={:.2f}%'.format(current_weights.shape,
-                                                                                         prune_percentage * 100.0))
+    logger.debug(
+        "Randomly pruning weights of shape {}. Prune percentage={:.2f}%".format(
+            current_weights.shape, prune_percentage * 100.0
+        )
+    )
     prune_count = int(np.prod(current_mask.shape) * prune_percentage)
     shape = current_mask.shape
     flat = np.ravel(current_mask)
@@ -37,7 +57,9 @@ def _prune_func_random(initial_weights, pretrained_weights, current_weights, cur
     return flat.reshape(shape)
 
 
-def _prune_func_smallest_weights(initial_weights, pretrained_weights, current_weights, current_mask, prune_percentage):
+def _prune_func_smallest_weights(
+    initial_weights, pretrained_weights, current_weights, current_mask, prune_percentage
+):
     """ Prunes the smallest magnitude (absolute value) weights.
     This function gets called with information about the layer being pruned including the initial weights, the current
     weights, the current mask. This function should not alter these.
@@ -55,8 +77,11 @@ def _prune_func_smallest_weights(initial_weights, pretrained_weights, current_we
         20 weights.
     :returns The new pruning mask. This is cumulative and hence should mask more weights than `current_mask`.
     """
-    logger.debug('Pruning smallest weights of shape {}. Prune percentage={:.2f}%'.format(current_weights.shape,
-                                                                                         prune_percentage * 100.0))
+    logger.debug(
+        "Pruning smallest weights of shape {}. Prune percentage={:.2f}%".format(
+            current_weights.shape, prune_percentage * 100.0
+        )
+    )
     prune_count = int(np.prod(current_mask.shape) * prune_percentage)
     current_weights_flatten = current_weights.flatten()
     current_mask_flatten = current_mask.flatten()
@@ -66,14 +91,66 @@ def _prune_func_smallest_weights(initial_weights, pretrained_weights, current_we
     max_min = flat_abs[flat_mins[prune_count - 1]]
     possible_prune_indices = np.where(np.absolute(current_weights_flatten) <= max_min)
     prune_count = min(len(possible_prune_indices[0]), prune_count)
-    prune_indices = np.random.choice(possible_prune_indices[0], prune_count, replace=False)
+    prune_indices = np.random.choice(
+        possible_prune_indices[0], prune_count, replace=False
+    )
     new_mask_flat = current_mask_flatten
     new_mask_flat[prune_indices] = 0
     new_mask = new_mask_flat.reshape(current_mask.shape)
     return new_mask
 
 
-def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None):
+def _prune_func_smallest_weights_layer_dependent_pruning_percentage(
+    initial_weights, pretrained_weights, current_weights, current_mask, dense_prune_percentage, convolutional_prune_percentage,
+        layer, is_output_layer
+):
+    """ Prunes the smallest magnitude (absolute value) weights. However it uses a different pruning percentage for
+    different kinds of layers.
+    """
+
+    logger.debug(
+        "Pruning smallest weights of shape {}. Dense Prune percentage={:.2f}%".format(
+            current_weights.shape, dense_prune_percentage * 100.0
+        )
+    )
+    logger.debug(
+        "Pruning smallest weights of shape {}. Convolutional Prune percentage={:.2f}%".format(
+            current_weights.shape, convolutional_prune_percentage * 100.0
+        )
+    )
+    layer_is_convolutional = False
+    for convolutional_layer_type in convolutional_layer_types:
+        if isinstance(layer, convolutional_layer_type):
+            layer_is_convolutional = True
+
+    if layer_is_convolutional:
+        prune_percentage = convolutional_prune_percentage
+    else:
+        prune_percentage = dense_prune_percentage
+        if is_output_layer:
+            prune_percentage /= 2
+
+    prune_count = int(np.prod(current_mask.shape) * prune_percentage)
+    current_weights_flatten = current_weights.flatten()
+    current_mask_flatten = current_mask.flatten()
+    current_weights_flatten[current_mask_flatten == 0] = math.inf
+    flat_abs = np.absolute(current_weights_flatten)
+    flat_mins = np.argpartition(flat_abs, prune_count - 1)
+    max_min = flat_abs[flat_mins[prune_count - 1]]
+    possible_prune_indices = np.where(np.absolute(current_weights_flatten) <= max_min)
+    prune_count = min(len(possible_prune_indices[0]), prune_count)
+    prune_indices = np.random.choice(
+        possible_prune_indices[0], prune_count, replace=False
+    )
+    new_mask_flat = current_mask_flatten
+    new_mask_flat[prune_indices] = 0
+    new_mask = new_mask_flat.reshape(current_mask.shape)
+    return new_mask
+
+
+def _prune_func_smallest_weights_global(
+    prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None
+):
     """ Like `_prune_func_smallest_weights()` except that rather than look for smallest N weights for each layer
     we look for the smallest N weights across all layers.
     Like `_prune_func_smallest_weights()` this means the smallest magnitude weights.
@@ -96,13 +173,21 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
     :returns n/a
     """
     if prune_percentage is None and prune_count is None:
-        raise ValueError('Either `prune_percentage` or `prune_count` must be specified')
+        raise ValueError("Either `prune_percentage` or `prune_count` must be specified")
 
     weight_counts = []
     all_weights_abs = []
     current_mask_flat = []
     prunables_list = list(prunables_iterator)
-    for tpl, layer, index, initial_weights, _, current_weights, current_mask in prunables_list:
+    for (
+        tpl,
+        layer,
+        index,
+        initial_weights,
+        _,
+        current_weights,
+        current_mask,
+    ) in prunables_list:
         all_weights_abs.extend(np.absolute(current_weights.flat))
         current_mask_flat.extend(current_mask.flat)
         weight_count = np.prod(current_weights.shape)
@@ -112,11 +197,17 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
         prune_count = int(total_weight_count * prune_percentage)
     if prune_count == 0:
         logger.warning(
-            '{} called with parameters indicating no pruning should be done'.format(sys._getframe().f_code.co_name))
+            "{} called with parameters indicating no pruning should be done".format(
+                sys._getframe().f_code.co_name
+            )
+        )
         return
 
-    logger.info('Pruning {} of {} total weights ({:.2f}%)'.format(prune_count, total_weight_count,
-                                                                  prune_count / total_weight_count * 100))
+    logger.info(
+        "Pruning {} of {} total weights ({:.2f}%)".format(
+            prune_count, total_weight_count, prune_count / total_weight_count * 100
+        )
+    )
     current_mask_flat = np.array(current_mask_flat)
     all_weights_abs = np.array(all_weights_abs)
     # flake8 complains about this but "current_mask_flat is False" does *not* work
@@ -124,7 +215,15 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
     flat_mins = np.argpartition(all_weights_abs, prune_count - 1)
     max_min = all_weights_abs[flat_mins[prune_count - 1]]
 
-    for tpl, layer, index, initial_weights, _, current_weights, current_mask in prunables_list:
+    for (
+        tpl,
+        layer,
+        index,
+        initial_weights,
+        _,
+        current_weights,
+        current_mask,
+    ) in prunables_list:
         # Just in case `current_weights` isn't in a pruned state
         current_weights *= current_mask
         new_mask = np.absolute(current_weights) > max_min
@@ -132,13 +231,16 @@ def _prune_func_smallest_weights_global(prunables_iterator, update_mask_func, pr
         weight_count = np.prod(current_weights.shape)
         percentage = pruned_count / weight_count * 100
         logger.debug(
-            'Globally pruned {} of {} ({:.2f}%) smallest weights of layer {}/{}'.format(pruned_count, weight_count,
-                                                                                        percentage,
-                                                                                        layer.name, index))
+            "Globally pruned {} of {} ({:.2f}%) smallest weights of layer {}/{}".format(
+                pruned_count, weight_count, percentage, layer.name, index
+            )
+        )
         update_mask_func(tpl, index, new_mask)
 
 
-def _prune_func_large_final(prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None):
+def _prune_func_large_final(
+    prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None
+):
     """ Prunes weights by keeping those with the largest magnitude from the fully trained model.
     This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
     :param iterable prunables_iterator: A iterator that returns information about what weights are prunable in the model
@@ -155,22 +257,34 @@ def _prune_func_large_final(prunables_iterator, update_mask_func, prune_percenta
     :returns n/a
     """
     if prune_percentage is None and prune_count is None:
-        raise ValueError('Either `prune_percentage` or `prune_count` must be specified')
+        raise ValueError("Either `prune_percentage` or `prune_count` must be specified")
 
     use_prune_percentage = prune_count is None
 
-    for tpl, layer, index, initial_weights, pretrained_weights, current_weights, current_mask in prunables_iterator:
+    for (
+        tpl,
+        layer,
+        index,
+        initial_weights,
+        pretrained_weights,
+        current_weights,
+        current_mask,
+    ) in prunables_iterator:
         if pretrained_weights is None:
             raise ValueError(
                 '"large_final" pruning strategy requires that `LotteryTicketPruner.pretrained_weights()` be called '
-                'with a pre-trained model')
+                "with a pre-trained model"
+            )
 
         weight_count = np.prod(pretrained_weights.shape)
         if use_prune_percentage:
             prune_count = int(weight_count * prune_percentage)
         if prune_count == 0:
             logger.warning(
-                '{} called with parameters indicating no pruning should be done'.format(sys._getframe().f_code.co_name))
+                "{} called with parameters indicating no pruning should be done".format(
+                    sys._getframe().f_code.co_name
+                )
+            )
             return
         # The logic below assumes `prune_count` is the total number of weights to be pruned
         prune_count += np.sum(current_mask == 0)
@@ -187,9 +301,11 @@ def _prune_func_large_final(prunables_iterator, update_mask_func, prune_percenta
         new_mask = np.absolute(pretrained_weights) > max_min
         pruned_count = np.sum(new_mask == 0)
         percentage = pruned_count / weight_count * 100
-        logger.debug('Pruning {} of {} ({:.2f}%) using "large_final" for layer {}/{}'.format(pruned_count, weight_count,
-                                                                                             percentage,
-                                                                                             layer.name, index))
+        logger.debug(
+            'Pruning {} of {} ({:.2f}%) using "large_final" for layer {}/{}'.format(
+                pruned_count, weight_count, percentage, layer.name, index
+            )
+        )
         update_mask_func(tpl, index, new_mask)
 
 
@@ -217,28 +333,31 @@ class LotteryTicketPruner(object):
     Inspired from
         https://arxiv.org/pdf/1803.03635.pdf, "THE LOTTERY TICKET HYPOTHESIS: FINDING SPARSE, TRAINABLE NEURAL NETWORKS"
     """
+
     def __init__(self, initial_model):
         """
         :param initial_model: The model containing the initial weights to be used by the pruning logic to determine
             which weights of the model being trained are to be pruned.
             Some pruning strategies require access to the initial weights of the model to determine the pruning mask.
         """
-        self.prunable_layer_names = ('Conv1D',
-                                     'Conv2D',
-                                     'Conv2DTranspose',
-                                     'Conv3D',
-                                     'Conv3DTranspose',
-                                     'Convolution1D',
-                                     'Convolution2D',
-                                     'Convolution2DTranspose',
-                                     'Convolution3D',
-                                     'Convolution3DTranspose',
-                                     'Dense',
-                                     'DepthwiseConv2D',
-                                     'SeparableConv1D',
-                                     'SeparableConv2D',
-                                     'SeparableConvolution1D',
-                                     'SeparableConvolution2D')
+        self.prunable_layer_names = (
+            "Conv1D",
+            "Conv2D",
+            "Conv2DTranspose",
+            "Conv3D",
+            "Conv3DTranspose",
+            "Convolution1D",
+            "Convolution2D",
+            "Convolution2DTranspose",
+            "Convolution3D",
+            "Convolution3DTranspose",
+            "Dense",
+            "DepthwiseConv2D",
+            "SeparableConv1D",
+            "SeparableConv2D",
+            "SeparableConvolution1D",
+            "SeparableConvolution2D",
+        )
 
         # Now determine which weights of which layers are prunable
         layer_index = 0
@@ -271,10 +390,12 @@ class LotteryTicketPruner(object):
                 self.prunable_tuples.append(tpl)
                 self.prune_masks_map[tpl] = prune_masks
                 self._initial_weights_map[tpl] = initial_layer_weights
-            self.layer_input_shapes.append(getattr(layer, 'input_shape', None))
-            self.layer_output_shapes.append(getattr(layer, 'output_shape', None))
+            self.layer_input_shapes.append(getattr(layer, "input_shape", None))
+            self.layer_output_shapes.append(getattr(layer, "output_shape", None))
             layer_index += 1
-        self.cumulative_pruning_rate = 0.0
+        self.dense_cumulative_pruning_rate = 0.0
+        self.convolutional_cumulative_pruning_rate = 0.0
+
 
     def _verify_compatible_model(self, model):
         # Disabled since there are legit cases where the two models may different. E.g when using transfer learning
@@ -283,15 +404,23 @@ class LotteryTicketPruner(object):
         # if len(model.layers) != len(self.layer_input_shapes):
         #     raise ValueError('`model` must have the same number of layers as the initial model used to create this '
         #                      'instance ({} vs {}'.format(len(model.layers), len(self.layer_input_shapes)))
-        for layer, input_shape, output_shape in zip(model.layers, self.layer_input_shapes, self.layer_output_shapes):
-            if getattr(layer, 'input_shape', None) != input_shape:
-                raise ValueError('All layers in `model` and `initial_model` must have the same input shape for layer '
-                                 '{} ({} vs {})'.format(layer.name, getattr(layer, 'input_shape', None), input_shape))
-
-            if getattr(layer, 'output_shape', None) != output_shape:
+        for layer, input_shape, output_shape in zip(
+            model.layers, self.layer_input_shapes, self.layer_output_shapes
+        ):
+            if getattr(layer, "input_shape", None) != input_shape:
                 raise ValueError(
-                    'All layers in `model` and `initial_model` must have the same output shape {} ({} vs {})'.format(
-                        layer.name, getattr(layer, 'output_shape', None), output_shape))
+                    "All layers in `model` and `initial_model` must have the same input shape for layer "
+                    "{} ({} vs {})".format(
+                        layer.name, getattr(layer, "input_shape", None), input_shape
+                    )
+                )
+
+            if getattr(layer, "output_shape", None) != output_shape:
+                raise ValueError(
+                    "All layers in `model` and `initial_model` must have the same output shape {} ({} vs {})".format(
+                        layer.name, getattr(layer, "output_shape", None), output_shape
+                    )
+                )
 
     def _prunable(self, layer, weights):
         """ Depending on how callers import keras and what version of tensorflow is being used  the package path to the
@@ -303,8 +432,11 @@ class LotteryTicketPruner(object):
          This is unfortunate since it potentially excludes subclasses of any of the supported keras layers from being
          prunable.
          """
-        return len(weights.shape) > 1 and 'keras.layers' in type(layer).__module__ and type(
-            layer).__name__ in self.prunable_layer_names
+        return (
+            len(weights.shape) > 1
+            and "keras.layers" in type(layer).__module__
+            and type(layer).__name__ in self.prunable_layer_names
+        )
 
     def apply_dwr(self, model):
         """ Applies Dynamic Weight Rescaling (DWR) to the unpruned weights in the model.
@@ -318,7 +450,9 @@ class LotteryTicketPruner(object):
         `apply_pruning()` if DWR is desired.
         :param model: The model whose unpruned weights should be rescaled.
         """
-        for tpl, layer, index, _, _, current_weights, mask in self.iterate_prunables(model):
+        for tpl, layer, index, _, _, current_weights, mask in self.iterate_prunables(
+            model
+        ):
             num_weights = np.prod(current_weights.shape)
             num_ones = np.sum(mask == 1)
             scale_factor = num_weights / num_ones
@@ -393,17 +527,26 @@ class LotteryTicketPruner(object):
             for index in indices:
                 mask = self.prune_masks_map[tpl][index]
                 initial_weights = self._initial_weights_map[tpl][index]
-                pretrained_weights = self._pretrained_weights[tpl][
-                    index] if self._pretrained_weights is not None else None
-                yield tpl, layer, index, initial_weights, pretrained_weights, current_weights[index], mask
+                pretrained_weights = (
+                    self._pretrained_weights[tpl][index]
+                    if self._pretrained_weights is not None
+                    else None
+                )
+                yield tpl, layer, index, initial_weights, pretrained_weights, current_weights[
+                    index
+                ], mask
 
-    def calc_prune_mask(self, model, prune_percentage, prune_strategy):
+    def calc_prune_mask(self, model, dense_prune_percentage, convolutional_prune_percentage, prune_strategy):
         """ Prunes the specified percentage of the remaining unpruned weights from the model.
         This updates the model's weights such that they are now pruned.
         This also updates the internal pruned weight masks managed by this instance. @see `apply_pruning()`
         :param model: The model that contains the current weights to be used to calculate the pruning mask.
             Typically this is the model being trained while being pruned every epoch.
-        :param float prune_percentage: The percentage *of remaining unpruned weights* to be pruned.
+        :param float dense_prune_percentage: The percentage *of remaining unpruned weights* to be pruned for dense_layers.
+            Note that these pruning percentages are cumulative within an instance of this class.
+            E.g. Calling `calc_prune_mask()` twice, once with 0.5 and again with 0.2 will result in 60% pruning.
+                (0.5 + (1.0 - 0.5) * 0.2) = 0.60
+        :param float convolutional_prune_percentage: The percentage *of remaining unpruned weights* to be pruned for convolutional layers.
             Note that these pruning percentages are cumulative within an instance of this class.
             E.g. Calling `calc_prune_mask()` twice, once with 0.5 and again with 0.2 will result in 60% pruning.
                 (0.5 + (1.0 - 0.5) * 0.2) = 0.60
@@ -417,31 +560,87 @@ class LotteryTicketPruner(object):
             'large_final': Keeps the weights that have the largest magnitude from the previously trained model.
                 This is 'large_final' as defined in https://arxiv.org/pdf/1905.01067.pdf
         """
-        if not (0.0 < prune_percentage < 1.0):
+        if not (0.0 < dense_prune_percentage < 1.0):
             raise ValueError(
-                '"prune_percentage" must be between 0.0 and 1.0 exclusive but it was {}'.format(prune_percentage))
+                '"convolutional_prune_percentage" must be between 0.0 and 1.0 exclusive but it was {}'.format(
+                    convolutional_prune_percentage
+                )
+            )
+        if not (0.0 < convolutional_prune_percentage < 1.0):
+            raise ValueError(
+                '"convolutional_prune_percentage" must be between 0.0 and 1.0 exclusive but it was {}'.format(
+                    convolutional_prune_percentage
+                )
+            )
         self._verify_compatible_model(model)
 
         # Convert percentage of remaining to percentage overall since the latter is easier for pruning functions to use
-        actual_prune_percentage = (1.0 - self.cumulative_pruning_rate) * prune_percentage
-        self.cumulative_pruning_rate += actual_prune_percentage
+        actual_dense_prune_percentage = (
+            1.0 - self.dense_cumulative_pruning_rate
+        ) * dense_prune_percentage
+        self.dense_cumulative_pruning_rate += actual_dense_prune_percentage
 
-        local_prune_strats = {'random': _prune_func_random, 'smallest_weights': _prune_func_smallest_weights}
-        global_prune_strats = {'smallest_weights_global': _prune_func_smallest_weights_global,
-                               'large_final': _prune_func_large_final}
+        actual_convolutional_prune_percentage = (
+                                          1.0 - self.convolutional_cumulative_pruning_rate
+                                  ) * convolutional_prune_percentage
+        self.convolutional_cumulative_pruning_rate += actual_convolutional_prune_percentage
+
+        local_prune_strats = {
+            "random": _prune_func_random,
+            "smallest_weights": _prune_func_smallest_weights,
+            "smallest_weights_layer_dependent_pruning_percentage": _prune_func_smallest_weights_layer_dependent_pruning_percentage,
+        }
+        global_prune_strats = {
+            "smallest_weights_global": _prune_func_smallest_weights_global,
+            "large_final": _prune_func_large_final,
+        }
         if prune_strategy in local_prune_strats:
+            number_of_prunable_layers = sum(1 for _ in self.iterate_prunables(model))
             local_prune_func = local_prune_strats[prune_strategy]
-            for tpl, layer, index, initial_weights, pretrained_weights, current_weights, mask in self.iterate_prunables(
-                    model):
-                new_mask = local_prune_func(initial_weights, pretrained_weights, current_weights, mask,
-                                            actual_prune_percentage)
+            for i, (
+                tpl,
+                layer,
+                index,
+                initial_weights,
+                pretrained_weights,
+                current_weights,
+                mask,
+            ) in enumerate(self.iterate_prunables(model)):
+                if local_prune_func is _prune_func_smallest_weights_layer_dependent_pruning_percentage:
+                    if i == number_of_prunable_layers -1:
+                        is_last_layer = True
+                    else:
+                        is_last_layer = False
+                    new_mask = local_prune_func(
+                        initial_weights,
+                        pretrained_weights,
+                        current_weights,
+                        mask,
+                        dense_prune_percentage,
+                        convolutional_prune_percentage,
+                        layer,
+                        is_last_layer
+                    )
+                else:
+                    new_mask = local_prune_func(
+                        initial_weights,
+                        pretrained_weights,
+                        current_weights,
+                        mask,
+                        dense_prune_percentage,
+                    )
                 self.prune_masks_map[tpl][index] = new_mask
         elif prune_strategy in global_prune_strats:
             global_prune_func = global_prune_strats[prune_strategy]
-            global_prune_func(self.iterate_prunables(model), self._update_mask,
-                              prune_percentage=actual_prune_percentage)
+            global_prune_func(
+                self.iterate_prunables(model),
+                self._update_mask,
+                prune_percentage=actual_dense_prune_percentage,
+            )
         else:
-            all_keys = set(local_prune_strats.keys()).union(set(global_prune_strats.keys()))
+            all_keys = set(local_prune_strats.keys()).union(
+                set(global_prune_strats.keys())
+            )
             raise ValueError('"prune_strategy" must be one of {}'.format(all_keys))
 
     def apply_pruning(self, model):
