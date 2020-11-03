@@ -616,8 +616,8 @@ class LotteryTicketPruner(object):
                         pretrained_weights,
                         current_weights,
                         mask,
-                        dense_prune_percentage,
-                        convolutional_prune_percentage,
+                        actual_dense_prune_percentage,
+                        actual_convolutional_prune_percentage,
                         layer,
                         is_last_layer
                     )
@@ -627,7 +627,7 @@ class LotteryTicketPruner(object):
                         pretrained_weights,
                         current_weights,
                         mask,
-                        dense_prune_percentage,
+                        actual_dense_prune_percentage,
                     )
                 self.prune_masks_map[tpl][index] = new_mask
         elif prune_strategy in global_prune_strats:
