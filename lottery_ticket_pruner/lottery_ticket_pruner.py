@@ -148,6 +148,17 @@ def _prune_func_smallest_weights_layer_dependent_pruning_percentage(
     return new_mask
 
 
+def _prune_all_zero_weights(current_weights, current_mask):
+    """ Prune all the weights that are already 0
+    """
+    current_weights_flatten = current_weights.flatten()
+    current_mask_flatten = current_mask.flatten()
+    prune_indices = np.where(np.absolute(current_weights_flatten)==0)
+    new_mask_flat = current_mask_flatten
+    new_mask_flat[prune_indices] = 0
+    new_mask = new_mask_flat.reshape(current_mask.shape)
+    return new_mask
+
 def _prune_func_smallest_weights_global(
     prunables_iterator, update_mask_func, prune_percentage=None, prune_count=None
 ):
@@ -589,6 +600,7 @@ class LotteryTicketPruner(object):
             "random": _prune_func_random,
             "smallest_weights": _prune_func_smallest_weights,
             "smallest_weights_layer_dependent_pruning_percentage": _prune_func_smallest_weights_layer_dependent_pruning_percentage,
+            "prune_all_zero_weights": _prune_all_zero_weights
         }
         global_prune_strats = {
             "smallest_weights_global": _prune_func_smallest_weights_global,
@@ -621,6 +633,8 @@ class LotteryTicketPruner(object):
                         layer,
                         is_last_layer
                     )
+                elif local_prune_func is _prune_all_zero_weights:
+                    new_mask = _prune_all_zero_weights(current_weights, mask)
                 else:
                     new_mask = local_prune_func(
                         initial_weights,

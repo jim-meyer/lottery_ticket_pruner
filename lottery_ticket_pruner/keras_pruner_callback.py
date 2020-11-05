@@ -3,7 +3,7 @@ import tensorflow.keras as keras
 
 class PrunerCallback(keras.callbacks.Callback):
     """  """
-    def __init__(self, pruner, use_dwr=False):
+    def __init__(self, pruner, use_dwr=False, prune_every_batch_iteration=False):
         """ A keras callback that prunes weights using a `LotteryTicketPruner`.
         Per the intention of lottery ticket pruning the model being trained is pruned at the beginning of every epoch so
         that training is done with the pruned weights set to zero.
@@ -22,6 +22,7 @@ class PrunerCallback(keras.callbacks.Callback):
         super().__init__()
         self.pruner = pruner
         self.use_dwr = use_dwr
+        self.prune_every_batch_iteration = prune_every_batch_iteration
 
     def on_train_end(self, logs=None):
         super().on_train_end(logs)
@@ -35,3 +36,10 @@ class PrunerCallback(keras.callbacks.Callback):
         self.pruner.apply_pruning(self.model)
         if self.use_dwr:
             self.pruner.apply_dwr(self.model)
+
+    def on_train_batch_end(self, batch, logs=None):
+        if self.prune_every_batch_iteration:
+            super().on_epoch_begin(batch, logs)
+            self.pruner.apply_pruning(self.model)
+            if self.use_dwr:
+                self.pruner.apply_dwr(self.model)
