@@ -27,12 +27,12 @@ class PrunerCallback(keras.callbacks.Callback):
         self.prune_every_batch_iteration = prune_every_batch_iteration
         self.iterative_model_non_zero_dense_weights_after_pruning = iterative_model_non_zero_dense_weights_after_pruning
         self.iterative_model_non_zero_convolutional_weights_after_pruning = iterative_model_non_zero_convolutional_weights_after_pruning
-        self.recalculate_epoch_cycle = recalculate_epoch_cycle
+        self.recalculate_epoch_cycle = int(recalculate_epoch_cycle)
         if self.iterative_model_non_zero_dense_weights_after_pruning is not None:
             assert self.iterative_model_non_zero_convolutional_weights_after_pruning is not None
-            assert isinstance(self.iterative_model_non_zero_dense_weights_after_pruning, List)
-            assert isinstance(self.iterative_model_non_zero_convolutional_weights_after_pruning, List)
-            assert isinstance(recalculate_epoch_cycle, int)
+            assert isinstance(self.iterative_model_non_zero_dense_weights_after_pruning, List),self.iterative_model_non_zero_dense_weights_after_pruning
+            assert isinstance(self.iterative_model_non_zero_convolutional_weights_after_pruning, List), self.iterative_model_non_zero_convolutional_weights_after_pruning
+            assert isinstance(recalculate_epoch_cycle, int), recalculate_epoch_cycle
             assert len(self.iterative_model_non_zero_convolutional_weights_after_pruning) == len(self.iterative_model_non_zero_dense_weights_after_pruning)
 
         self.pruning_iteration = 0
@@ -59,7 +59,7 @@ class PrunerCallback(keras.callbacks.Callback):
                                         "smallest_weights_layer_dependent_pruning_percentage")
 
             smallest_weight_pruner.apply_pruning(self.model)
-          
+
         self.pruning_iteration += 1
 
     def on_train_batch_end(self, batch, logs=None):
