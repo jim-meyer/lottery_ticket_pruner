@@ -1,6 +1,7 @@
 import tensorflow.keras as keras
 from typing import List
 import lottery_ticket_pruner.lottery_ticket_pruner as ltp
+import numpy as np
 
 class PrunerCallback(keras.callbacks.Callback):
     """  """
@@ -32,7 +33,7 @@ class PrunerCallback(keras.callbacks.Callback):
             assert self.iterative_model_non_zero_convolutional_weights_after_pruning is not None
             assert isinstance(self.iterative_model_non_zero_dense_weights_after_pruning, List),self.iterative_model_non_zero_dense_weights_after_pruning
             assert isinstance(self.iterative_model_non_zero_convolutional_weights_after_pruning, List), self.iterative_model_non_zero_convolutional_weights_after_pruning
-            assert isinstance(recalculate_epoch_cycle, int), recalculate_epoch_cycle
+            assert isinstance(self.recalculate_epoch_cycle, int), self.recalculate_epoch_cycle
             assert len(self.iterative_model_non_zero_convolutional_weights_after_pruning) == len(self.iterative_model_non_zero_dense_weights_after_pruning)
 
         self.pruning_iteration = 0
@@ -52,6 +53,13 @@ class PrunerCallback(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.iterative_model_epoch_cyle == 0 and epoch > 0:
+            model_weights = self.model.get_weights()
+            number_of_weights = self.model.count_params()
+            non_zero_weights_count = 0
+            for weights in model_weights:
+                non_zero_weights_count += np.count_nonzero(weights)
+            non_zero_weight_percentage = float(non_zero_weights_count / number_of_weights)
+            print("Model non zero weight percentage BEFORE pruning ", non_zero_weight_percentage)
             smallest_weight_pruner = ltp.LotteryTicketPruner(self.model)
 
             smallest_weight_pruner.calc_prune_mask(self.model, self.iterative_model_non_zero_dense_weights_after_pruning[self.pruning_iteration],
@@ -60,7 +68,14 @@ class PrunerCallback(keras.callbacks.Callback):
 
             smallest_weight_pruner.apply_pruning(self.model)
 
-        self.pruning_iteration += 1
+            self.pruning_iteration += 1
+            model_weights = self.model.get_weights()
+            number_of_weights = self.model.count_params()
+            non_zero_weights_count = 0
+            for weights in model_weights:
+                non_zero_weights_count += np.count_nonzero(weights)
+            non_zero_weight_percentage = float(non_zero_weights_count / number_of_weights)
+            print("Model non zero weight percentage AFTER pruning ", non_zero_weight_percentage)
 
     def on_train_batch_end(self, batch, logs=None):
         if self.prune_every_batch_iteration:
