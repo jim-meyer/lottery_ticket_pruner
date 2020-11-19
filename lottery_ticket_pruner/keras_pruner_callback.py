@@ -40,6 +40,7 @@ class PrunerCallback(keras.callbacks.Callback):
         if self.use_dwr:
             self.pruner.apply_dwr(self.model)
 
+
     def on_train_batch_end(self, batch, logs=None):
         if self.prune_every_batch_iteration:
             super().on_epoch_begin(batch, logs)
