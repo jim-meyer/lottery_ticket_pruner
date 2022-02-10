@@ -10,7 +10,7 @@
 # of dependent packages, direct or indirect, are released that have incompatibilities.
 keras==2.2.4
 numpy==1.18.3
-tensorflow==1.15.2
+tensorflow==2.5.3
 
 # For running unit tests
 tox==3.15.0
