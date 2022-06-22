@@ -8,7 +8,7 @@
 # Then when doing 'pip install -r ...' the *_frozen.txt file should be used.
 # This helps keep builds reproducible. And avoids breakages if/when new versions
 # of dependent packages, direct or indirect, are released that have incompatibilities.
-numpy==1.18.5
+numpy==1.22.0
 tensorflow==2.2.0
 
 # For running unit tests

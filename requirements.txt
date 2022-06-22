@@ -9,7 +9,7 @@
 # This helps keep builds reproducible. And avoids breakages if/when new versions
 # of dependent packages, direct or indirect, are released that have incompatibilities.
 keras==2.2.4
-numpy==1.18.3
+numpy==1.22.0
 tensorflow==1.15.2
 
 # For running unit tests
